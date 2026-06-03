@@ -9,7 +9,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Cpu, CheckCircle2, ChevronDown, Workflow, Play } from "lucide-react";
 import StepCard from "../components/analysis/StepCard";
 import SuggestionCard from "../components/automation/SuggestionCard";
-import AgenticDeploymentFlow from "../components/automation/AgenticArchitectureOld";
 import SwimlaneDiagram from "../components/automation/AgenticWorkflowDiagramNew";
 import SapValidationWorkflow from "../components/automation/AgenticArchitectureNew";
 import SuggestionExportPdf from "../components/pdf/SuggestionExportPdf";
