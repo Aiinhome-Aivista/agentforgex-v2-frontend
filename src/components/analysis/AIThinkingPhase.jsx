@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 
 /**
  * AIThinkingPhase
@@ -44,6 +44,7 @@ export default function AIThinkingPhase({
   compact = false,
 }) {
   const [wordIdx, setWordIdx] = useState(0)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -51,6 +52,13 @@ export default function AIThinkingPhase({
     }, 1600)
     return () => clearInterval(id)
   }, [words.length])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [])
 
   const size = compact ? 150 : 220
   const linkPaths = useMemo(
@@ -61,7 +69,7 @@ export default function AIThinkingPhase({
   )
 
   return (
-    <div className="afx-think w-full flex flex-col items-center justify-center py-12 select-none animate-fade-in">
+    <div ref={containerRef} className="afx-think w-full flex flex-col items-center justify-center py-12 select-none animate-fade-in">
       <style>{`
         @keyframes afxPulseNode {
           0%, 100% { opacity: .35; transform: scale(.8); }

@@ -117,7 +117,7 @@ export default function HomePage() {
       </div>
 
       {/* Uploader section */}
-      <div ref={phase === 'thinking' || phase === 'finalizing' ? phaseRef : null}>
+      <div>
         <FileUploader
           key={resetKey}
           onAnalyze={handleAnalyze}

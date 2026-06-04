@@ -41,7 +41,12 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
   ]))
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [stage, setStage] = useState('chat') // 'chat' | 'confirm'
+  const [stage, setStage] = useState(() => {
+    if (baseGraph?.analysis_ready === true && baseGraph?.status === 'knowledge_collection_complete') {
+      return 'confirm'
+    }
+    return 'chat'
+  })
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -53,6 +58,12 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, busy, stage])
+
+  useEffect(() => {
+    if (baseGraph?.analysis_ready === true && baseGraph?.status === 'knowledge_collection_complete') {
+      setStage('confirm')
+    }
+  }, [baseGraph])
 
   const transcript = useMemo(
     () =>
@@ -81,6 +92,9 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
         ...m,
         { role: 'bot', content: answer, followup: followup || null },
       ])
+      if (res?.analysis_ready === true && res?.status === 'knowledge_collection_complete') {
+        setStage('confirm')
+      }
     } catch (err) {
       setMessages(m => [
         ...m,
@@ -181,18 +195,22 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
 
         {/* Suggested questions */}
         {stage === 'chat' && (
-          <div className="px-6 pb-3 flex flex-wrap gap-2">
-            {suggested.map((q, i) => (
-              <button
-                key={i}
-                onClick={() => send(q)}
-                disabled={busy}
-                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-white/60 hover:text-brand-300 hover:border-brand-500/30 transition-all disabled:opacity-40"
-              >
-                <CircleHelp size={11} className="shrink-0" />
-                <span className="truncate max-w-[260px]">{q}</span>
-              </button>
-            ))}
+          <div className="px-6 pb-4 max-h-[160px] overflow-auto scrollbar-custom">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+              {suggested.map((q, i) => (
+                <button
+                  key={i}
+                  onClick={() => send(q)}
+                  disabled={busy}
+                  className="flex items-start gap-2.5 text-xs px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 hover:text-brand-300 hover:border-brand-500/30 transition-all disabled:opacity-40 text-left w-full h-auto"
+                >
+                  <CircleHelp size={14} className="shrink-0 mt-0.5 text-white/40 group-hover:text-brand-400 transition-colors" />
+                  <span className="flex-1 leading-normal whitespace-normal break-words">
+                    {q}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
