@@ -65,6 +65,13 @@ export const smeChat = (sessionId, query, history = []) =>
 export const finalizeSme = (sessionId, transcript) =>
   api.post('/sme/finalize', { session_id: sessionId, transcript })
 
+/**
+ * DAgent — fetch suggested starter questions generated from the uploaded data.
+ * Returned pre-ordered by question philosophy: What → Where → Why → rest.
+ */
+export const getSuggestedQuestions = (sessionId) =>
+  api.get(`/sme/${sessionId}/suggested-questions`)
+
 export const getProcess = (id) => api.get(`/processes/${id}`)
 export const listProcesses = () => api.get('/processes')
 export const getAutomation = (id) => api.get(`/processes/${id}/automation`)

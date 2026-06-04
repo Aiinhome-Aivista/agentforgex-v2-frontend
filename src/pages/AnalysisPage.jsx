@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Bot } from 'lucide-react'
 import ProcessHeader from '../components/analysis/ProcessHeader'
 import OverviewTab from '../components/analysis/OverviewTab'
 import ERPContextTab from '../components/analysis/ERPContextTab'
 import AutomationTab from '../components/analysis/AutomationTab'
+import DAgentWelcome from '../components/analysis/DAgentWelcome'
+import DAgentChatPanel from '../components/analysis/DAgentChatPanel'
 import ExportPDF from '../components/pdf/ExportPdf'
 import SaveToWorkspaceButton from '../components/workspace/SaveToWorkspaceButton'
 import { getProcess } from '../services/api'
@@ -43,6 +45,12 @@ export default function AnalysisPage() {
   const [isReanalyzing, setIsReanalyzing] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
+
+  // DAgent — "speak to your data" assistant
+  // 'prompt' → floating Yes/No invite | 'open' → chat drawer | 'minimized' → side tab
+  const [dagentStage, setDagentStage] = useState(() =>
+    sessionStorage.getItem(`dagent_dismissed_${id}`) ? 'minimized' : 'prompt'
+  )
 
   const refetch = useCallback(async () => {
     setIsReanalyzing(true)
@@ -143,8 +151,52 @@ export default function AnalysisPage() {
 
   const { process, steps, suggestions, erp_modules, key_insights, top_automation_targets } = result
 
+  // The chat is grounded in the session's base knowledge graph.
+  const dagentSessionId =
+    result?.process?.session_id ||
+    result?.session_id ||
+    localStorage.getItem('session_id') ||
+    id
+
+  const dismissDagent = () => {
+    sessionStorage.setItem(`dagent_dismissed_${id}`, '1')
+    setDagentStage('minimized')
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      {/* DAgent — welcome prompt pinned to the right of the header cards */}
+      {dagentStage === 'prompt' && (
+        <DAgentWelcome
+          onYes={() => setDagentStage('open')}
+          onNo={dismissDagent}
+        />
+      )}
+
+      {/* DAgent — minimized side tab to re-open the assistant */}
+      {dagentStage === 'minimized' && (
+        <button
+          onClick={() => setDagentStage('open')}
+          className="fixed right-0 top-1/3 z-40 flex items-center gap-2 pl-3 pr-2.5 py-2.5
+              rounded-l-xl bg-brand-500/15 border border-r-0 border-brand-500/30 backdrop-blur-lg
+              text-brand-400 hover:bg-brand-500/25 hover:text-brand-300 transition-all
+              shadow-lg shadow-brand-500/10"
+          title="Open DAgent — speak to your data"
+        >
+          <Bot size={17} />
+          <span className="text-[10px] font-black uppercase tracking-widest [writing-mode:vertical-rl] rotate-180">
+            DAgent
+          </span>
+        </button>
+      )}
+
+      {/* DAgent — right-hand chat drawer */}
+      <DAgentChatPanel
+        open={dagentStage === 'open'}
+        sessionId={dagentSessionId}
+        onClose={dismissDagent}
+      />
+
       {/* Back button */}
       <button
         onClick={() => navigate('/home')}

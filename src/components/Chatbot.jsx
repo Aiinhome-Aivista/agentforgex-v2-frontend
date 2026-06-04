@@ -143,6 +143,7 @@ export default function Chatbot() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [isSending, setIsSending] = useState(false);
+  const [isDagentOpen, setIsDagentOpen] = useState(false);
 
   // Pending context awaiting Yes/No confirmation.  When set, the next
   // user reply is interpreted in light of it (server-side).
@@ -169,6 +170,16 @@ export default function Chatbot() {
   useEffect(() => {
     const timer = setTimeout(() => setIsBouncing(false), 2000);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleToggle = (e) => {
+      setIsDagentOpen(!!e?.detail?.open);
+    };
+    window.addEventListener('dagent-panel-toggle', handleToggle);
+    return () => {
+      window.removeEventListener('dagent-panel-toggle', handleToggle);
+    };
   }, []);
 
   // Clear chat history when switching to a different analysis/suggestion
@@ -385,7 +396,7 @@ export default function Chatbot() {
       {/* Floating Button */}
       <button
         onClick={toggleChat}
-        className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg bg-[#00FF9D] text-[#0A0A0B] hover:bg-[#00e68d] transition-all duration-300 z-50 ${isOpen ? 'scale-0' : 'scale-100'} ${isBouncing && !isOpen ? 'animate-bounce' : ''}`}
+        className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg bg-[#00FF9D] text-[#0A0A0B] hover:bg-[#00e68d] transition-all duration-300 ${isDagentOpen ? 'z-30' : 'z-50'} ${isOpen ? 'scale-0' : 'scale-100'} ${isBouncing && !isOpen ? 'animate-bounce' : ''}`}
         aria-label="Open chat"
       >
         <MessageCircle size={28} />
@@ -393,7 +404,7 @@ export default function Chatbot() {
 
       {/* Chat Window */}
       <div
-        className={`fixed bottom-6 right-6 w-[400px] sm:w-[480px] h-[600px] max-h-[80vh] bg-[#121214] border border-[#27272A] rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 transform origin-[calc(100%-30px)_calc(100%-30px)] ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
+        className={`fixed bottom-6 right-6 w-[400px] sm:w-[480px] h-[600px] max-h-[80vh] bg-[#121214] border border-[#27272A] rounded-2xl shadow-2xl flex flex-col ${isDagentOpen ? 'z-30' : 'z-50'} transition-all duration-300 transform origin-[calc(100%-30px)_calc(100%-30px)] ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-[#27272A] bg-[#1A1A1D] rounded-t-2xl">
