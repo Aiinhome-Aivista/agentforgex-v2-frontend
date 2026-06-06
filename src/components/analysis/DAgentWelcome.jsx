@@ -55,7 +55,7 @@ export default function DAgentWelcome({ onYes, onNo }) {
           {/* message */}
           <p className="relative text-[13px] text-white/65 leading-relaxed mb-1.5">
             <span className="text-white/90 font-semibold">Speak to your data.</span>{' '}
-           
+
           </p>
           <p className="relative text-[13px] font-semibold text-white/85 mb-4 flex items-center gap-1.5">
             <Database size={13} className="text-brand-400 shrink-0" />
