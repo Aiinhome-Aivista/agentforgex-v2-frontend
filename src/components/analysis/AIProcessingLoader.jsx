@@ -1,110 +1,22 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
+import DoodleRobot from "./DoodleRobot";
+import StageEnvironment from "./StageEnvironment";
+import { STAGES, THINKING_MESSAGES } from "./processingStages";
 
-const STEPS = [
-  {
-    id: 1,
-    title: "Uploading Files",
-    desc: "Preparing your documents...",
-    progress: 10,
-  },
-  {
-    id: 2,
-    title: "Pre-processing Data",
-    desc: "Cleaning and extracting content...",
-    progress: 20,
-  },
-  {
-    id: 3,
-    title: "Understanding Content",
-    desc: "Analyzing context and meaning...",
-    progress: 35,
-  },
-  {
-    id: 4,
-    title: "Building Knowledge Graph",
-    desc: "Mapping entities and relationships...",
-    progress: 50,
-  },
-  {
-    id: 5,
-    title: "Creating AI Embeddings",
-    desc: "Converting knowledge into vectors...",
-    progress: 65,
-  },
-  {
-    id: 6,
-    title: "Storing Intelligence",
-    desc: "Indexing data for rapid retrieval...",
-    progress: 75,
-  },
-  {
-    id: 7,
-    title: "Discovering Workflows",
-    desc: "Identifying process steps and actions...",
-    progress: 85,
-  },
-  {
-    id: 8,
-    title: "AI Reasoning",
-    desc: "Connecting insights and patterns...",
-    progress: 95,
-  },
-  {
-    id: 9,
-    title: "Generating Results",
-    desc: "Creating summaries and recommendations...",
-    progress: 100,
-  },
-];
-
-// Custom knowledge graph coordinates inside a 300x300 viewBox
-const CORE_NODE = [150, 150];
-const SURROUNDING_NODES = [
-  [90, 90], // Node 1
-  [210, 90], // Node 2
-  [210, 210], // Node 3
-  [90, 210], // Node 4
-  [150, 60], // Node 5
-  [240, 150], // Node 6
-  [150, 240], // Node 7
-  [60, 150], // Node 8
-];
-
-const LINKS = [
-  { from: CORE_NODE, to: SURROUNDING_NODES[0] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[1] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[2] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[3] },
-  { from: SURROUNDING_NODES[0], to: SURROUNDING_NODES[4] },
-  { from: SURROUNDING_NODES[0], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[1], to: SURROUNDING_NODES[4] },
-  { from: SURROUNDING_NODES[1], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[2], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[2], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[3], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[3], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[4], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[5], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[6], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[7], to: SURROUNDING_NODES[4] },
-];
-
-const NODES = [
-  [70, 60], [105, 45], [150, 52], [185, 78],
-  [60, 100], [98, 92], [138, 88], [175, 112],
-  [78, 138], [118, 130], [158, 132], [188, 150],
-  [95, 168], [140, 168],
-];
-
-const LINKS_BRAIN = [
-  [0, 1], [1, 2], [2, 3], [0, 4], [1, 5], [2, 6], [3, 7],
-  [4, 5], [5, 6], [6, 7], [4, 8], [5, 9], [6, 10], [7, 11],
-  [8, 9], [9, 10], [10, 11], [8, 12], [9, 12], [10, 13], [11, 13],
-  [12, 13], [5, 8], [6, 9], [2, 5],
-];
-
+/**
+ * AIProcessingLoader — Premium AI processing visualization.
+ *
+ * Displays a Doodle Robot character that physically reacts to 9 processing
+ * stages, surrounded by stage-specific environment animations, a progress bar,
+ * rotating thinking messages, and a timeline checklist.
+ *
+ * Public API (unchanged):
+ * @param {number}   duration       — Total animation duration in ms (default: 15000)
+ * @param {boolean}  isApiFinished  — Set true when backend work completes
+ * @param {function} onComplete     — Callback fired after completion animation
+ */
 export default function AIProcessingLoader({
   duration = 15000,
   isApiFinished = false,
@@ -112,33 +24,23 @@ export default function AIProcessingLoader({
 }) {
   const [activeStep, setActiveStep] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
-  const stepDuration = duration / STEPS.length;
-
-  const size = 220;
-  const linkPaths = useMemo(
-    () => LINKS_BRAIN.map(([a, b]) => ({
-      x1: NODES[a][0], y1: NODES[a][1], x2: NODES[b][0], y2: NODES[b][1],
-    })),
-    []
-  );
+  const [thinkingIdx, setThinkingIdx] = useState(0);
+  const stepDuration = duration / STAGES.length;
 
   // Ref to track if we've already fired onComplete to avoid duplicates
   const completeFired = useRef(false);
 
-  // Step progression effect
+  // ─── Step progression ──────────────────────────────────────────────────
   useEffect(() => {
     if (isCompleted) return;
 
     const timer = setInterval(() => {
       setActiveStep((prev) => {
-        // If we are at the last step (index 8)
-        if (prev === STEPS.length - 1) {
-          // If the API call has finished, we can trigger the final complete animation state
+        if (prev === STAGES.length - 1) {
           if (isApiFinished) {
             clearInterval(timer);
             setIsCompleted(true);
           }
-          // Otherwise, we hold at Step 8 (95% progress state) waiting for isApiFinished
           return prev;
         }
         return prev + 1;
@@ -148,52 +50,47 @@ export default function AIProcessingLoader({
     return () => clearInterval(timer);
   }, [stepDuration, isApiFinished, isCompleted]);
 
-  // Watch for isApiFinished if we are already at the last step
+  // ─── Watch for API finish at last step ─────────────────────────────────
   useEffect(() => {
-    if (activeStep === STEPS.length - 1 && isApiFinished && !isCompleted) {
+    if (activeStep === STAGES.length - 1 && isApiFinished && !isCompleted) {
       const delayTimer = setTimeout(() => {
         setIsCompleted(true);
-      }, 800); // Small breathing room to show the last step before success
+      }, 800);
       return () => clearTimeout(delayTimer);
     }
   }, [activeStep, isApiFinished, isCompleted]);
 
-  // Trigger onComplete after success animation finishes
+  // ─── Trigger onComplete after success animation ────────────────────────
   useEffect(() => {
     if (isCompleted && onComplete && !completeFired.current) {
       const timer = setTimeout(() => {
         completeFired.current = true;
         onComplete();
-      }, 2000); // Duration of the success screen display
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isCompleted, onComplete]);
 
+  // ─── Rotate thinking messages every 2 seconds ─────────────────────────
+  useEffect(() => {
+    const messages = THINKING_MESSAGES[activeStep] || [];
+    if (messages.length <= 1) return;
+
+    setThinkingIdx(0);
+    const timer = setInterval(() => {
+      setThinkingIdx((prev) => (prev + 1) % messages.length);
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [activeStep]);
+
+  const currentThinkingMessage = useCallback(() => {
+    const messages = THINKING_MESSAGES[activeStep] || [];
+    return messages[thinkingIdx % messages.length] || "";
+  }, [activeStep, thinkingIdx]);
+
   return (
-    <div className="afx-think w-full flex items-center justify-center p-4 min-h-[500px]">
-      <style>{`
-        @keyframes afxPulseNode {
-          0%, 100% { opacity: .35; transform: scale(.8); }
-          50%      { opacity: 1;   transform: scale(1.35); }
-        }
-        @keyframes afxDash {
-          to { stroke-dashoffset: -40; }
-        }
-        @keyframes afxRing {
-          0%   { transform: rotate(0deg);   opacity: .5; }
-          50%  { opacity: 1; }
-          100% { transform: rotate(360deg); opacity: .5; }
-        }
-        @keyframes afxFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-6px); }
-        }
-        .afx-think .afx-node { transform-box: fill-box; transform-origin: center;
-          animation: afxPulseNode 2.4s ease-in-out infinite; }
-        .afx-think .afx-link { stroke-dasharray: 6 14;
-          animation: afxDash 1.4s linear infinite; }
-        .afx-think .afx-brain { animation: afxFloat 4s ease-in-out infinite; }
-      `}</style>
+    <div className="w-full flex items-center justify-center p-4 min-h-[500px]">
       <AnimatePresence mode="wait">
         {!isCompleted ? (
           <motion.div
@@ -204,223 +101,35 @@ export default function AIProcessingLoader({
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full max-w-4xl bg-brand-surface/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col md:flex-row gap-8 items-center"
           >
-            {/* Absolute gradients for premium feel */}
+            {/* Ambient background glows */}
             <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-80 h-80 bg-brand-500/10 blur-[100px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-80 h-80 bg-cyan-500/10 blur-[100px] pointer-events-none" />
 
-            {/* Left Column: Network Visualization & Core Step Info */}
+            {/* ══════════════════════════════════════════════════════════════
+                LEFT COLUMN — Robot + Environment + Stage Info
+               ══════════════════════════════════════════════════════════════ */}
             <div className="w-full md:w-1/2 flex flex-col items-center justify-center space-y-6">
-              {/* Central Knowledge Graph */}
-              <div className="relative w-[260px] h-[260px] flex items-center justify-center">
-                {/* Glow ring in the background */}
-                <div className="absolute w-[200px] h-[200px] rounded-full bg-brand-500/5 blur-xl animate-pulse" />
+              {/* Robot Arena — Environment wraps the robot */}
+              <div className="relative w-[260px] h-[280px] flex items-center justify-center">
+                {/* Soft radial glow behind robot */}
+                <div className="absolute w-[180px] h-[180px] rounded-full bg-brand-500/5 blur-xl animate-pulse" />
 
-                {/* <svg className="w-full h-full relative" viewBox="0 0 300 300">
-                  <defs>
-                    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </radialGradient>
-                    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#6ee7b7" />
-                      <stop offset="100%" stopColor="#047857" />
-                    </radialGradient>
-                  </defs>
+                {/* Stage environment scene */}
+                <StageEnvironment stageIndex={activeStep} />
 
-                  <motion.g
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 40,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    style={{ transformOrigin: "150px 150px" }}
-                  >
-                    {LINKS.map((link, idx) => (
-                      <line
-                        key={`link-${idx}`}
-                        x1={link.from[0]}
-                        y1={link.from[1]}
-                        x2={link.to[0]}
-                        y2={link.to[1]}
-                        className="stroke-white/10"
-                        strokeWidth="1.5"
-                      />
-                    ))}
-
-                    {LINKS.map((link, idx) => (
-                      <motion.circle
-                        key={`particle-${idx}`}
-                        r="3"
-                        fill="#34d399"
-                        style={{ filter: "drop-shadow(0 0 4px #10b981)" }}
-                        animate={{
-                          cx: [link.from[0], link.to[0]],
-                          cy: [link.from[1], link.to[1]],
-                        }}
-                        transition={{
-                          duration: 2.2 + (idx % 3) * 0.4,
-                          repeat: Infinity,
-                          ease: "linear",
-                          delay: (idx * 0.15) % 2,
-                        }}
-                      />
-                    ))}
-
-                    {SURROUNDING_NODES.map((node, idx) => (
-                      <g key={`node-grp-${idx}`}>
-                        
-                        <motion.circle
-                          cx={node[0]}
-                          cy={node[1]}
-                          r="7"
-                          fill="rgba(16, 185, 129, 0.2)"
-                          animate={{
-                            scale: [1, 1.5, 1],
-                            opacity: [0.4, 0, 0.4],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            delay: idx * 0.25,
-                          }}
-                        />
-
-                        <circle
-                          cx={node[0]}
-                          cy={node[1]}
-                          r="4.5"
-                          fill="url(#nodeGlow)"
-                        />
-                      </g>
-                    ))}
-
-                    <g>
-                      {[1, 2, 3].map((i) => (
-                        <motion.circle
-                          key={`ripple-${i}`}
-                          cx={CORE_NODE[0]}
-                          cy={CORE_NODE[1]}
-                          r="12"
-                          fill="none"
-                          stroke="rgba(16, 185, 129, 0.3)"
-                          strokeWidth="1"
-                          animate={{
-                            scale: [1, 2.6, 1],
-                            opacity: [0.5, 0, 0.5],
-                          }}
-                          transition={{
-                            duration: 3,
-                            repeat: Infinity,
-                            delay: i * 0.9,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
-                      <motion.circle
-                        cx={CORE_NODE[0]}
-                        cy={CORE_NODE[1]}
-                        r="9.5"
-                        fill="url(#coreGlow)"
-                        animate={{ scale: [1, 1.15, 1] }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      />
-                    </g>
-                  </motion.g>
-                </svg> */}
-
-                <svg
-                  className="afx-brain relative"
-                  viewBox="0 0 240 200"
-                  width={size}
-                  height={size}
-                >
-                  <defs>
-                    <radialGradient id="afxNodeGrad" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#6ee7b7" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </radialGradient>
-                    <linearGradient
-                      id="afxBrainStroke"
-                      x1="0"
-                      y1="0"
-                      x2="1"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#22d3ee" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Brain silhouette */}
-                  <path
-                    d="M120 24
-               C150 8 196 14 206 52
-               C228 60 230 104 206 120
-               C214 150 188 184 150 178
-               C138 192 102 192 90 178
-               C52 184 26 150 34 120
-               C10 104 12 60 34 52
-               C44 14 90 8 120 24 Z"
-                    fill="rgba(16,185,129,0.05)"
-                    stroke="url(#afxBrainStroke)"
-                    strokeWidth="1.5"
-                    strokeOpacity="0.55"
-                  />
-                  {/* Central fissure */}
-                  <path
-                    d="M120 24 C116 70 124 120 120 178"
-                    fill="none"
-                    stroke="url(#afxBrainStroke)"
-                    strokeWidth="1.2"
-                    strokeOpacity="0.4"
-                  />
-
-                  {/* Synapse links */}
-                  <g>
-                    {linkPaths.map((l, i) => (
-                      <line
-                        key={i}
-                        className="afx-link"
-                        x1={l.x1}
-                        y1={l.y1}
-                        x2={l.x2}
-                        y2={l.y2}
-                        stroke="#10b981"
-                        strokeWidth="1"
-                        strokeOpacity="0.55"
-                        style={{ animationDelay: `${(i % 7) * 0.18}s` }}
-                      />
-                    ))}
-                  </g>
-
-                  {/* Neural nodes */}
-                  <g>
-                    {NODES.map(([x, y], i) => (
-                      <circle
-                        key={i}
-                        className="afx-node"
-                        cx={x}
-                        cy={y}
-                        r={i % 3 === 0 ? 4.5 : 3.2}
-                        fill="url(#afxNodeGrad)"
-                        style={{ animationDelay: `${(i % 6) * 0.32}s` }}
-                      />
-                    ))}
-                  </g>
-                </svg>
+                {/* Doodle Robot — positioned centrally */}
+                <div className="relative z-10">
+                  <DoodleRobot stageIndex={activeStep} />
+                </div>
               </div>
 
-              {/* Step Info Box */}
+              {/* ── Stage Info Box ── */}
               <div className="w-full text-center space-y-2 px-4">
                 <span className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-brand-400">
-                  Step {activeStep + 1} of {STEPS.length}
+                  Step {activeStep + 1} of {STAGES.length}
                 </span>
 
+                {/* Title + Description with transition */}
                 <div className="h-16 flex flex-col justify-center">
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -432,21 +141,21 @@ export default function AIProcessingLoader({
                       className="space-y-1"
                     >
                       <h3 className="text-xl font-bold text-white tracking-tight">
-                        {STEPS[activeStep].title}
+                        {STAGES[activeStep].title}
                       </h3>
                       <p className="text-sm text-white/50">
-                        {STEPS[activeStep].desc}
+                        {STAGES[activeStep].desc}
                       </p>
                     </motion.div>
                   </AnimatePresence>
                 </div>
 
-                {/* Progress Bar Container */}
+                {/* Progress Bar */}
                 <div className="space-y-2 mt-4 max-w-xs mx-auto">
                   <div className="w-full h-1.5 rounded-full bg-white/5 border border-white/10 overflow-hidden relative">
                     <motion.div
                       className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full"
-                      animate={{ width: `${STEPS[activeStep].progress}%` }}
+                      animate={{ width: `${STAGES[activeStep].progress}%` }}
                       transition={{ duration: 0.5, ease: "easeOut" }}
                       style={{ boxShadow: "0 0 10px rgba(16, 185, 129, 0.4)" }}
                     />
@@ -454,14 +163,32 @@ export default function AIProcessingLoader({
                   <div className="flex justify-between items-center text-xs font-mono text-white/40">
                     <span>PROGRESS</span>
                     <span className="font-bold text-brand-400">
-                      {STEPS[activeStep].progress}%
+                      {STAGES[activeStep].progress}%
                     </span>
                   </div>
+                </div>
+
+                {/* Rotating Thinking Messages */}
+                <div className="h-6 mt-3 flex items-center justify-center">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={`${activeStep}-${thinkingIdx}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="text-xs text-white/30 font-mono italic"
+                    >
+                      {currentThinkingMessage()}
+                    </motion.p>
+                  </AnimatePresence>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Timeline Checklist */}
+            {/* ══════════════════════════════════════════════════════════════
+                RIGHT COLUMN — Timeline Checklist
+               ══════════════════════════════════════════════════════════════ */}
             <div className="w-full md:w-1/2 flex flex-col justify-center pl-0 md:pl-8 border-t md:border-t-0 md:border-l border-white/5 pt-8 md:pt-0">
               <div className="relative space-y-5">
                 {/* Vertical connecting line */}
@@ -469,17 +196,16 @@ export default function AIProcessingLoader({
                 <motion.div
                   className="absolute left-[13px] top-2 w-0.5 bg-gradient-to-b from-brand-500 to-cyan-400 origin-top"
                   animate={{
-                    height: `${(activeStep / (STEPS.length - 1)) * 100}%`,
+                    height: `${(activeStep / (STAGES.length - 1)) * 100}%`,
                   }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
                   style={{ maxHeight: "calc(100% - 16px)" }}
                 />
 
                 {/* Steps Timeline items */}
-                {STEPS.map((step, idx) => {
+                {STAGES.map((step, idx) => {
                   const isCompletedStep = idx < activeStep;
                   const isActiveStep = idx === activeStep;
-                  const isUpcomingStep = idx > activeStep;
 
                   return (
                     <div
@@ -553,6 +279,9 @@ export default function AIProcessingLoader({
             </div>
           </motion.div>
         ) : (
+          /* ══════════════════════════════════════════════════════════════
+             COMPLETION CARD
+             ══════════════════════════════════════════════════════════════ */
           <motion.div
             key="success-card"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -563,6 +292,15 @@ export default function AIProcessingLoader({
           >
             {/* Soft background glow */}
             <div className="absolute inset-0 bg-radial-gradient from-brand-500/10 to-transparent blur-[80px] pointer-events-none" />
+
+            {/* Celebrating robot */}
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 150, damping: 12 }}
+            >
+              <DoodleRobot stageIndex={8} />
+            </motion.div>
 
             {/* Checkmark draw animation */}
             <div className="relative w-20 h-20 flex items-center justify-center">
