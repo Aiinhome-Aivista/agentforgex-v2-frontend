@@ -15,22 +15,23 @@ const STEPS = [
     desc: "Cleaning and extracting content...",
     progress: 20,
   },
+
   {
     id: 3,
-    title: "Understanding Content",
-    desc: "Analyzing context and meaning...",
+    title: "Reviewing Information",
+    desc: "Organizing and understanding the uploaded content...",
     progress: 35,
   },
   {
     id: 4,
-    title: "Building Knowledge Graph",
-    desc: "Mapping entities and relationships...",
+    title: "Identifying Key Processes",
+    desc: "Discovering important activities, workflows, and business operations...",
     progress: 50,
   },
   {
     id: 5,
     title: "Creating AI Embeddings",
-    desc: "Converting knowledge into vectors...",
+    desc: "Organizing information to enable smarter decision-making...",
     progress: 65,
   },
   {
@@ -484,11 +485,10 @@ export default function AIProcessingLoader({
                   return (
                     <div
                       key={step.id}
-                      className={`flex items-start gap-4 transition-all duration-300 ${
-                        isActiveStep
-                          ? "scale-[1.02] translate-x-1"
-                          : "opacity-60"
-                      }`}
+                      className={`flex items-start gap-4 transition-all duration-300 ${isActiveStep
+                        ? "scale-[1.02] translate-x-1"
+                        : "opacity-60"
+                        }`}
                     >
                       {/* Timeline Dot Indicator */}
                       <div className="relative z-10 flex items-center justify-center w-7 h-7">
@@ -526,13 +526,12 @@ export default function AIProcessingLoader({
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <h4
-                          className={`text-sm font-semibold tracking-tight transition-colors duration-200 ${
-                            isActiveStep
-                              ? "text-white"
-                              : isCompletedStep
-                                ? "text-white/80"
-                                : "text-white/30"
-                          }`}
+                          className={`text-sm font-semibold tracking-tight transition-colors duration-200 ${isActiveStep
+                            ? "text-white"
+                            : isCompletedStep
+                              ? "text-white/80"
+                              : "text-white/30"
+                            }`}
                         >
                           {step.title}
                         </h4>

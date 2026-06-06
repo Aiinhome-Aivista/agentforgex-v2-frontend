@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Send, Sparkles, CheckCircle2, MessageSquare, Loader2,
-  CircleHelp, ArrowRight, Network, X,
+  ArrowRight, Network, X,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { smeChat } from '../../services/api'
+import { smeChat, smeStart } from '../../services/api'
 
 /**
  * SMEChatPanel
  * ─────────────────────────────────────────────────────────────────────────
- * Interactive Subject-Matter-Expert chat that sits directly below the upload
- * section after the AI "thinking" phase. The user queries the base graph
- * (what / where / why), then marks the chat complete and confirms whether to
- * run the final analysis.
+ * System-led SME interview that sits directly below the upload section after
+ * the AI "thinking" phase. The SYSTEM speaks first and asks targeted
+ * what / where / why-or-how questions; the user answers in their own words.
+ * Each answer enriches the knowledge graph, and the next question is
+ * dynamically personalised — like talking to a sharp, friendly colleague.
  *
  * Props:
  *   sessionId        {string}
@@ -20,27 +21,10 @@ import { smeChat } from '../../services/api'
  *   onConfirmAnalyze {(transcript:string)=>void}
  *   onCancel         {()=>void}   optional — abandon the SME flow
  */
-const WH_STARTERS = [
-  { k: 'What',  q: 'What are the key entities and what does each represent?' },
-  { k: 'Where', q: 'Where does each important field originate in my data?' },
-  { k: 'Why',   q: 'Why are these entities related the way they are?' },
-  { k: 'How',   q: 'How does the data flow through this process?' },
-]
-
 export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, onCancel }) {
-  const [messages, setMessages] = useState(() => ([
-    {
-      role: 'bot',
-      content:
-        baseGraph?.summary?.trim()
-          ? `I've mapped a base knowledge graph from your data${baseGraph?.domain ? ` (${baseGraph.domain})` : ''}. ` +
-            `${baseGraph.summary} Ask me anything — what an entity means, where a field comes from, or why things connect. ` +
-            `Add any business knowledge I should fold into the analysis.`
-          : `I've reviewed your data. Ask me what / where / why about it, and tell me any business rules or context I should use in the analysis.`,
-    },
-  ]))
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(true) // busy while fetching the opening question
   const [stage, setStage] = useState(() => {
     if (baseGraph?.analysis_ready === true && baseGraph?.status === 'knowledge_collection_complete') {
       return 'confirm'
@@ -49,11 +33,57 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
   })
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
+  const openedRef = useRef(false)
 
-  const suggested = useMemo(() => {
-    const fromApi = (baseGraph?.suggested_questions || []).filter(Boolean)
-    return fromApi.length ? fromApi.slice(0, 6) : WH_STARTERS.map(s => s.q)
-  }, [baseGraph])
+  // The system opens the conversation: greeting + first question.
+  useEffect(() => {
+    if (!sessionId || openedRef.current) return
+    openedRef.current = true
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await smeStart(sessionId)
+        if (cancelled) return
+        
+        let messageText = res?.message?.trim() || ''
+        const questionText = res?.question?.trim() || res?.followup_question?.trim() || ''
+        
+        if (messageText && questionText) {
+          // Strip the duplicate question from the end of the message text if present
+          const qIndex = messageText.lastIndexOf(questionText)
+          if (qIndex !== -1) {
+            messageText = messageText.substring(0, qIndex).trim()
+          }
+        }
+        
+        const opening = messageText || `Thanks for sharing your data — I'd love to ask you a few quick questions so the analysis reflects how things really work.`
+        const initialQuestion = questionText || `To start, what's your role in this process?`
+        
+        setMessages([{ role: 'bot', content: opening, question: initialQuestion }])
+      } catch {
+        if (cancelled) return
+        const fallbackText = baseGraph?.summary?.trim()
+          ? `Thanks for the upload — ${baseGraph.summary}`
+          : `Thanks for sharing your data — I'd love to ask you a few quick questions so the analysis reflects how things really work.`
+        const fallbackQuestion = `To start, what's your role in this process?`
+        
+        setMessages([{
+          role: 'bot',
+          content: fallbackText,
+          question: fallbackQuestion
+        }])
+      } finally {
+        if (!cancelled) {
+          setBusy(false)
+          inputRef.current?.focus()
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+      openedRef.current = false
+    }
+  }, [sessionId, baseGraph])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -69,7 +99,11 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
     () =>
       messages
         .filter(m => m.role === 'user' || m.role === 'bot')
-        .map(m => `${m.role === 'user' ? 'SME' : 'Assistant'}: ${m.content}`)
+        .map(m => {
+          if (m.role === 'user') return `SME: ${m.content}`
+          const fullContent = m.question ? `${m.content} ${m.question}`.trim() : m.content
+          return `Assistant: ${fullContent}`
+        })
         .join('\n'),
     [messages]
   )
@@ -80,18 +114,27 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
     setInput('')
     const history = messages
       .filter(m => m.role === 'user' || m.role === 'bot')
-      .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))
+      .map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.role === 'bot' && m.question ? `${m.content} ${m.question}`.trim() : m.content
+      }))
 
     setMessages(m => [...m, { role: 'user', content: q }])
     setBusy(true)
     try {
       const res = await smeChat(sessionId, q, history)
-      const answer = res?.answer || 'Noted — I will use that in the analysis.'
-      const followup = res?.followup_question
-      setMessages(m => [
-        ...m,
-        { role: 'bot', content: answer, followup: followup || null },
-      ])
+      
+      let answerText = res?.answer || 'Noted — I will use that in the analysis.'
+      const nextQuestion = res?.question || res?.followup_question || ''
+      
+      if (answerText && nextQuestion) {
+        const qIndex = answerText.lastIndexOf(nextQuestion)
+        if (qIndex !== -1) {
+          answerText = answerText.substring(0, qIndex).trim()
+        }
+      }
+      
+      setMessages(m => [...m, { role: 'bot', content: answerText, question: nextQuestion }])
       if (res?.analysis_ready === true && res?.status === 'knowledge_collection_complete') {
         setStage('confirm')
       }
@@ -151,24 +194,25 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
                   <Sparkles size={13} className="text-brand-400" />
                 </div>
               )}
-              <div
-                className={clsx(
-                  'max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
-                  m.role === 'user'
-                    ? 'bg-brand-500 text-black font-medium rounded-br-sm'
-                    : 'bg-white/[0.06] border border-white/10 text-white/85 rounded-bl-sm'
-                )}
-              >
-                {m.content}
-                {m.followup && (
-                  <button
-                    onClick={() => send(m.followup)}
-                    disabled={busy}
-                    className="mt-2 flex items-center gap-1.5 text-xs text-brand-300 hover:text-brand-200 transition-colors"
-                  >
-                    <ArrowRight size={12} /> {m.followup}
-                  </button>
-                )}
+              <div className="max-w-[78%]">
+                <div
+                  className={clsx(
+                    'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+                    m.role === 'user'
+                      ? 'bg-brand-500 text-black font-medium rounded-br-sm'
+                      : 'bg-white/[0.06] border border-white/10 text-white/85 rounded-bl-sm'
+                  )}
+                >
+                  <div>{m.content}</div>
+                  {m.role === 'bot' && m.question && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <div className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-[11px] text-brand-400 font-semibold tracking-wide animate-fade-in shadow-sm">
+                        <Sparkles size={10} className="text-brand-400 shrink-0" />
+                        <span>{m.question}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -193,27 +237,6 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
           )}
         </div>
 
-        {/* Suggested questions */}
-        {stage === 'chat' && (
-          <div className="px-6 pb-4 max-h-[160px] overflow-auto scrollbar-custom">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-              {suggested.map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => send(q)}
-                  disabled={busy}
-                  className="flex items-start gap-2.5 text-xs px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 hover:text-brand-300 hover:border-brand-500/30 transition-all disabled:opacity-40 text-left w-full h-auto"
-                >
-                  <CircleHelp size={14} className="shrink-0 mt-0.5 text-white/40 group-hover:text-brand-400 transition-colors" />
-                  <span className="flex-1 leading-normal whitespace-normal break-words">
-                    {q}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Composer / confirm */}
         {stage === 'chat' ? (
           <div className="border-t border-white/10 p-4">
@@ -229,7 +252,7 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
                     send()
                   }
                 }}
-                placeholder="Ask what / where / why — or add business context…"
+                placeholder="Type your answer in your own words..."
                 className="flex-1 resize-none bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-brand-500/40 max-h-32"
               />
               <button
@@ -244,14 +267,14 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
               <p className="text-[11px] text-white/30 flex items-center gap-1.5">
                 <MessageSquare size={11} />
                 {userTurns === 0
-                  ? 'Chat with your data, then mark complete when ready.'
-                  : `${userTurns} question${userTurns > 1 ? 's' : ''} asked`}
+                  ? 'Answer in your own words — every answer makes to enrich context and information..'
+                  : `${userTurns} answer${userTurns > 1 ? 's' : ''} shared`}
               </p>
               <button
                 onClick={() => setStage('confirm')}
                 className="flex items-center gap-1.5 text-xs font-bold text-brand-400 hover:text-brand-300 transition-colors"
               >
-                <CheckCircle2 size={14} /> Mark chat complete
+                <CheckCircle2 size={14} /> I'm done — Proceed
               </button>
             </div>
           </div>
