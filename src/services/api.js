@@ -61,6 +61,13 @@ export const ingestBaseGraph = (files, userInput = '', sessionId = null) => {
 export const smeChat = (sessionId, query, history = []) =>
   api.post('/sme/chat', { session_id: sessionId, query, history })
 
+/**
+ * Start the system-led SME interview: the system speaks first with a warm,
+ * personalised opening message + first question. Returns { message, question }.
+ */
+export const smeStart = (sessionId) =>
+  api.post(`/sme/${sessionId}/start`)
+
 /** Fold the SME conversation into the base graph before final analysis. */
 export const finalizeSme = (sessionId, transcript) =>
   api.post('/sme/finalize', { session_id: sessionId, transcript })

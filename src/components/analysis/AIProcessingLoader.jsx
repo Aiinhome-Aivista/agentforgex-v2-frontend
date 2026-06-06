@@ -210,11 +210,10 @@ export default function AIProcessingLoader({
                   return (
                     <div
                       key={step.id}
-                      className={`flex items-start gap-4 transition-all duration-300 ${
-                        isActiveStep
-                          ? "scale-[1.02] translate-x-1"
-                          : "opacity-60"
-                      }`}
+                      className={`flex items-start gap-4 transition-all duration-300 ${isActiveStep
+                        ? "scale-[1.02] translate-x-1"
+                        : "opacity-60"
+                        }`}
                     >
                       {/* Timeline Dot Indicator */}
                       <div className="relative z-10 flex items-center justify-center w-7 h-7">
@@ -252,13 +251,12 @@ export default function AIProcessingLoader({
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <h4
-                          className={`text-sm font-semibold tracking-tight transition-colors duration-200 ${
-                            isActiveStep
-                              ? "text-white"
-                              : isCompletedStep
-                                ? "text-white/80"
-                                : "text-white/30"
-                          }`}
+                          className={`text-sm font-semibold tracking-tight transition-colors duration-200 ${isActiveStep
+                            ? "text-white"
+                            : isCompletedStep
+                              ? "text-white/80"
+                              : "text-white/30"
+                            }`}
                         >
                           {step.title}
                         </h4>

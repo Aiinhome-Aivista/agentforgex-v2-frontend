@@ -172,7 +172,7 @@ export default function FileUploader({ onAnalyze, loading, disabled, loader }) {
           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative flex items-center justify-center gap-3">
             {loading ? (
-              <><Loader2 size={18} className="animate-spin text-brand-500/60" /><span className="text-brand-500/60 font-bold">Analyzing Process...</span></>
+              <><Loader2 size={18} className="animate-spin text-brand-500/60" /><span className="text-brand-500/60 font-bold">Thinking Process...</span></>
             ) : (
               <>
                 <Upload size={18} className={clsx(
@@ -182,7 +182,7 @@ export default function FileUploader({ onAnalyze, loading, disabled, loader }) {
                 <span className={clsx(
                   "font-bold",
                   (files.length === 0 && (!userInput || userInput.trim() === '')) ? "text-brand-500/60" : "text-black"
-                )}>Analyze Process</span>
+                )}>Thinking Process</span>
               </>
             )}
           </div>
