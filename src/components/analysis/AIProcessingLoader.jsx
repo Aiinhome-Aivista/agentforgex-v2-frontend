@@ -1,31 +1,76 @@
-import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Check } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check } from "lucide-react";
 
 const STEPS = [
-  { id: 1, title: 'Uploading Files', desc: 'Preparing your documents...', progress: 10 },
-  { id: 2, title: 'Pre-processing Data', desc: 'Cleaning and extracting content...', progress: 20 },
-  { id: 3, title: 'Understanding Content', desc: 'Analyzing context and meaning...', progress: 35 },
-  { id: 4, title: 'Building Knowledge Graph', desc: 'Mapping entities and relationships...', progress: 50 },
-  { id: 5, title: 'Creating AI Embeddings', desc: 'Converting knowledge into vectors...', progress: 65 },
-  { id: 6, title: 'Storing Intelligence', desc: 'Indexing data for rapid retrieval...', progress: 75 },
-  { id: 7, title: 'Discovering Workflows', desc: 'Identifying process steps and actions...', progress: 85 },
-  { id: 8, title: 'AI Reasoning', desc: 'Connecting insights and patterns...', progress: 95 },
-  { id: 9, title: 'Generating Results', desc: 'Creating summaries and recommendations...', progress: 100 },
-]
+  {
+    id: 1,
+    title: "Uploading Files",
+    desc: "Preparing your documents...",
+    progress: 10,
+  },
+  {
+    id: 2,
+    title: "Pre-processing Data",
+    desc: "Cleaning and extracting content...",
+    progress: 20,
+  },
+  {
+    id: 3,
+    title: "Understanding Content",
+    desc: "Analyzing context and meaning...",
+    progress: 35,
+  },
+  {
+    id: 4,
+    title: "Building Knowledge Graph",
+    desc: "Mapping entities and relationships...",
+    progress: 50,
+  },
+  {
+    id: 5,
+    title: "Creating AI Embeddings",
+    desc: "Converting knowledge into vectors...",
+    progress: 65,
+  },
+  {
+    id: 6,
+    title: "Storing Intelligence",
+    desc: "Indexing data for rapid retrieval...",
+    progress: 75,
+  },
+  {
+    id: 7,
+    title: "Discovering Workflows",
+    desc: "Identifying process steps and actions...",
+    progress: 85,
+  },
+  {
+    id: 8,
+    title: "AI Reasoning",
+    desc: "Connecting insights and patterns...",
+    progress: 95,
+  },
+  {
+    id: 9,
+    title: "Generating Results",
+    desc: "Creating summaries and recommendations...",
+    progress: 100,
+  },
+];
 
 // Custom knowledge graph coordinates inside a 300x300 viewBox
-const CORE_NODE = [150, 150]
+const CORE_NODE = [150, 150];
 const SURROUNDING_NODES = [
-  [90, 90],   // Node 1
-  [210, 90],  // Node 2
+  [90, 90], // Node 1
+  [210, 90], // Node 2
   [210, 210], // Node 3
-  [90, 210],  // Node 4
-  [150, 60],  // Node 5
+  [90, 210], // Node 4
+  [150, 60], // Node 5
   [240, 150], // Node 6
   [150, 240], // Node 7
-  [60, 150],  // Node 8
-]
+  [60, 150], // Node 8
+];
 
 const LINKS = [
   { from: CORE_NODE, to: SURROUNDING_NODES[0] },
@@ -44,23 +89,45 @@ const LINKS = [
   { from: SURROUNDING_NODES[5], to: SURROUNDING_NODES[6] },
   { from: SURROUNDING_NODES[6], to: SURROUNDING_NODES[7] },
   { from: SURROUNDING_NODES[7], to: SURROUNDING_NODES[4] },
-]
+];
+
+const NODES = [
+  [70, 60], [105, 45], [150, 52], [185, 78],
+  [60, 100], [98, 92], [138, 88], [175, 112],
+  [78, 138], [118, 130], [158, 132], [188, 150],
+  [95, 168], [140, 168],
+];
+
+const LINKS_BRAIN = [
+  [0, 1], [1, 2], [2, 3], [0, 4], [1, 5], [2, 6], [3, 7],
+  [4, 5], [5, 6], [6, 7], [4, 8], [5, 9], [6, 10], [7, 11],
+  [8, 9], [9, 10], [10, 11], [8, 12], [9, 12], [10, 13], [11, 13],
+  [12, 13], [5, 8], [6, 9], [2, 5],
+];
 
 export default function AIProcessingLoader({
   duration = 15000,
   isApiFinished = false,
   onComplete,
 }) {
-  const [activeStep, setActiveStep] = useState(0)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const stepDuration = duration / STEPS.length
-  
+  const [activeStep, setActiveStep] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const stepDuration = duration / STEPS.length;
+
+  const size = 220;
+  const linkPaths = useMemo(
+    () => LINKS_BRAIN.map(([a, b]) => ({
+      x1: NODES[a][0], y1: NODES[a][1], x2: NODES[b][0], y2: NODES[b][1],
+    })),
+    []
+  );
+
   // Ref to track if we've already fired onComplete to avoid duplicates
-  const completeFired = useRef(false)
+  const completeFired = useRef(false);
 
   // Step progression effect
   useEffect(() => {
-    if (isCompleted) return
+    if (isCompleted) return;
 
     const timer = setInterval(() => {
       setActiveStep((prev) => {
@@ -68,42 +135,65 @@ export default function AIProcessingLoader({
         if (prev === STEPS.length - 1) {
           // If the API call has finished, we can trigger the final complete animation state
           if (isApiFinished) {
-            clearInterval(timer)
-            setIsCompleted(true)
+            clearInterval(timer);
+            setIsCompleted(true);
           }
           // Otherwise, we hold at Step 8 (95% progress state) waiting for isApiFinished
-          return prev
+          return prev;
         }
-        return prev + 1
-      })
-    }, stepDuration)
+        return prev + 1;
+      });
+    }, stepDuration);
 
-    return () => clearInterval(timer)
-  }, [stepDuration, isApiFinished, isCompleted])
+    return () => clearInterval(timer);
+  }, [stepDuration, isApiFinished, isCompleted]);
 
   // Watch for isApiFinished if we are already at the last step
   useEffect(() => {
     if (activeStep === STEPS.length - 1 && isApiFinished && !isCompleted) {
       const delayTimer = setTimeout(() => {
-        setIsCompleted(true)
-      }, 800) // Small breathing room to show the last step before success
-      return () => clearTimeout(delayTimer)
+        setIsCompleted(true);
+      }, 800); // Small breathing room to show the last step before success
+      return () => clearTimeout(delayTimer);
     }
-  }, [activeStep, isApiFinished, isCompleted])
+  }, [activeStep, isApiFinished, isCompleted]);
 
   // Trigger onComplete after success animation finishes
   useEffect(() => {
     if (isCompleted && onComplete && !completeFired.current) {
       const timer = setTimeout(() => {
-        completeFired.current = true
-        onComplete()
-      }, 2000) // Duration of the success screen display
-      return () => clearTimeout(timer)
+        completeFired.current = true;
+        onComplete();
+      }, 2000); // Duration of the success screen display
+      return () => clearTimeout(timer);
     }
-  }, [isCompleted, onComplete])
+  }, [isCompleted, onComplete]);
 
   return (
-    <div className="w-full flex items-center justify-center p-4 min-h-[500px]">
+    <div className="afx-think w-full flex items-center justify-center p-4 min-h-[500px]">
+      <style>{`
+        @keyframes afxPulseNode {
+          0%, 100% { opacity: .35; transform: scale(.8); }
+          50%      { opacity: 1;   transform: scale(1.35); }
+        }
+        @keyframes afxDash {
+          to { stroke-dashoffset: -40; }
+        }
+        @keyframes afxRing {
+          0%   { transform: rotate(0deg);   opacity: .5; }
+          50%  { opacity: 1; }
+          100% { transform: rotate(360deg); opacity: .5; }
+        }
+        @keyframes afxFloat {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
+        }
+        .afx-think .afx-node { transform-box: fill-box; transform-origin: center;
+          animation: afxPulseNode 2.4s ease-in-out infinite; }
+        .afx-think .afx-link { stroke-dasharray: 6 14;
+          animation: afxDash 1.4s linear infinite; }
+        .afx-think .afx-brain { animation: afxFloat 4s ease-in-out infinite; }
+      `}</style>
       <AnimatePresence mode="wait">
         {!isCompleted ? (
           <motion.div
@@ -111,7 +201,7 @@ export default function AIProcessingLoader({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full max-w-4xl bg-brand-surface/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col md:flex-row gap-8 items-center"
           >
             {/* Absolute gradients for premium feel */}
@@ -125,7 +215,7 @@ export default function AIProcessingLoader({
                 {/* Glow ring in the background */}
                 <div className="absolute w-[200px] h-[200px] rounded-full bg-brand-500/5 blur-xl animate-pulse" />
 
-                <svg className="w-full h-full relative" viewBox="0 0 300 300">
+                {/* <svg className="w-full h-full relative" viewBox="0 0 300 300">
                   <defs>
                     <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
                       <stop offset="0%" stopColor="#34d399" />
@@ -137,13 +227,15 @@ export default function AIProcessingLoader({
                     </radialGradient>
                   </defs>
 
-                  {/* Rotating Group containing graph elements */}
                   <motion.g
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-                    style={{ transformOrigin: '150px 150px' }}
+                    transition={{
+                      duration: 40,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    style={{ transformOrigin: "150px 150px" }}
                   >
-                    {/* Graph Links */}
                     {LINKS.map((link, idx) => (
                       <line
                         key={`link-${idx}`}
@@ -156,13 +248,12 @@ export default function AIProcessingLoader({
                       />
                     ))}
 
-                    {/* Traveling Synapse Particles */}
                     {LINKS.map((link, idx) => (
                       <motion.circle
                         key={`particle-${idx}`}
                         r="3"
                         fill="#34d399"
-                        style={{ filter: 'drop-shadow(0 0 4px #10b981)' }}
+                        style={{ filter: "drop-shadow(0 0 4px #10b981)" }}
                         animate={{
                           cx: [link.from[0], link.to[0]],
                           cy: [link.from[1], link.to[1]],
@@ -170,29 +261,31 @@ export default function AIProcessingLoader({
                         transition={{
                           duration: 2.2 + (idx % 3) * 0.4,
                           repeat: Infinity,
-                          ease: 'linear',
+                          ease: "linear",
                           delay: (idx * 0.15) % 2,
                         }}
                       />
                     ))}
 
-                    {/* Nodes (Surrounding) */}
                     {SURROUNDING_NODES.map((node, idx) => (
                       <g key={`node-grp-${idx}`}>
-                        {/* Outer pulse */}
+                        
                         <motion.circle
                           cx={node[0]}
                           cy={node[1]}
                           r="7"
                           fill="rgba(16, 185, 129, 0.2)"
-                          animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0, 0.4] }}
+                          animate={{
+                            scale: [1, 1.5, 1],
+                            opacity: [0.4, 0, 0.4],
+                          }}
                           transition={{
                             duration: 2,
                             repeat: Infinity,
                             delay: idx * 0.25,
                           }}
                         />
-                        {/* Node circle */}
+
                         <circle
                           cx={node[0]}
                           cy={node[1]}
@@ -202,9 +295,7 @@ export default function AIProcessingLoader({
                       </g>
                     ))}
 
-                    {/* Central Core Node */}
                     <g>
-                      {/* Ripple waves */}
                       {[1, 2, 3].map((i) => (
                         <motion.circle
                           key={`ripple-${i}`}
@@ -214,12 +305,15 @@ export default function AIProcessingLoader({
                           fill="none"
                           stroke="rgba(16, 185, 129, 0.3)"
                           strokeWidth="1"
-                          animate={{ scale: [1, 2.6, 1], opacity: [0.5, 0, 0.5] }}
+                          animate={{
+                            scale: [1, 2.6, 1],
+                            opacity: [0.5, 0, 0.5],
+                          }}
                           transition={{
                             duration: 3,
                             repeat: Infinity,
                             delay: i * 0.9,
-                            ease: 'easeInOut',
+                            ease: "easeInOut",
                           }}
                         />
                       ))}
@@ -229,10 +323,95 @@ export default function AIProcessingLoader({
                         r="9.5"
                         fill="url(#coreGlow)"
                         animate={{ scale: [1, 1.15, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
                       />
                     </g>
                   </motion.g>
+                </svg> */}
+
+                <svg
+                  className="afx-brain relative"
+                  viewBox="0 0 240 200"
+                  width={size}
+                  height={size}
+                >
+                  <defs>
+                    <radialGradient id="afxNodeGrad" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#6ee7b7" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </radialGradient>
+                    <linearGradient
+                      id="afxBrainStroke"
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#22d3ee" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Brain silhouette */}
+                  <path
+                    d="M120 24
+               C150 8 196 14 206 52
+               C228 60 230 104 206 120
+               C214 150 188 184 150 178
+               C138 192 102 192 90 178
+               C52 184 26 150 34 120
+               C10 104 12 60 34 52
+               C44 14 90 8 120 24 Z"
+                    fill="rgba(16,185,129,0.05)"
+                    stroke="url(#afxBrainStroke)"
+                    strokeWidth="1.5"
+                    strokeOpacity="0.55"
+                  />
+                  {/* Central fissure */}
+                  <path
+                    d="M120 24 C116 70 124 120 120 178"
+                    fill="none"
+                    stroke="url(#afxBrainStroke)"
+                    strokeWidth="1.2"
+                    strokeOpacity="0.4"
+                  />
+
+                  {/* Synapse links */}
+                  <g>
+                    {linkPaths.map((l, i) => (
+                      <line
+                        key={i}
+                        className="afx-link"
+                        x1={l.x1}
+                        y1={l.y1}
+                        x2={l.x2}
+                        y2={l.y2}
+                        stroke="#10b981"
+                        strokeWidth="1"
+                        strokeOpacity="0.55"
+                        style={{ animationDelay: `${(i % 7) * 0.18}s` }}
+                      />
+                    ))}
+                  </g>
+
+                  {/* Neural nodes */}
+                  <g>
+                    {NODES.map(([x, y], i) => (
+                      <circle
+                        key={i}
+                        className="afx-node"
+                        cx={x}
+                        cy={y}
+                        r={i % 3 === 0 ? 4.5 : 3.2}
+                        fill="url(#afxNodeGrad)"
+                        style={{ animationDelay: `${(i % 6) * 0.32}s` }}
+                      />
+                    ))}
+                  </g>
                 </svg>
               </div>
 
@@ -249,7 +428,7 @@ export default function AIProcessingLoader({
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="space-y-1"
                     >
                       <h3 className="text-xl font-bold text-white tracking-tight">
@@ -268,8 +447,8 @@ export default function AIProcessingLoader({
                     <motion.div
                       className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full"
                       animate={{ width: `${STEPS[activeStep].progress}%` }}
-                      transition={{ duration: 0.5, ease: 'easeOut' }}
-                      style={{ boxShadow: '0 0 10px rgba(16, 185, 129, 0.4)' }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                      style={{ boxShadow: "0 0 10px rgba(16, 185, 129, 0.4)" }}
                     />
                   </div>
                   <div className="flex justify-between items-center text-xs font-mono text-white/40">
@@ -292,23 +471,23 @@ export default function AIProcessingLoader({
                   animate={{
                     height: `${(activeStep / (STEPS.length - 1)) * 100}%`,
                   }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  style={{ maxHeight: 'calc(100% - 16px)' }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  style={{ maxHeight: "calc(100% - 16px)" }}
                 />
 
                 {/* Steps Timeline items */}
                 {STEPS.map((step, idx) => {
-                  const isCompletedStep = idx < activeStep
-                  const isActiveStep = idx === activeStep
-                  const isUpcomingStep = idx > activeStep
+                  const isCompletedStep = idx < activeStep;
+                  const isActiveStep = idx === activeStep;
+                  const isUpcomingStep = idx > activeStep;
 
                   return (
                     <div
                       key={step.id}
                       className={`flex items-start gap-4 transition-all duration-300 ${
                         isActiveStep
-                          ? 'scale-[1.02] translate-x-1'
-                          : 'opacity-60'
+                          ? "scale-[1.02] translate-x-1"
+                          : "opacity-60"
                       }`}
                     >
                       {/* Timeline Dot Indicator */}
@@ -317,7 +496,11 @@ export default function AIProcessingLoader({
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 20,
+                            }}
                             className="w-5 h-5 rounded-full bg-brand-500 text-black flex items-center justify-center shadow-[0_0_8px_rgba(16,185,129,0.3)]"
                           >
                             <Check size={12} className="stroke-[3]" />
@@ -327,7 +510,11 @@ export default function AIProcessingLoader({
                             <motion.div
                               className="absolute w-5 h-5 rounded-full bg-brand-500/25 border border-brand-500"
                               animate={{ scale: [1, 1.4, 1] }}
-                              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                              transition={{
+                                duration: 1.6,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                              }}
                             />
                             <div className="w-2.5 h-2.5 rounded-full bg-brand-400" />
                           </div>
@@ -341,10 +528,10 @@ export default function AIProcessingLoader({
                         <h4
                           className={`text-sm font-semibold tracking-tight transition-colors duration-200 ${
                             isActiveStep
-                              ? 'text-white'
+                              ? "text-white"
                               : isCompletedStep
-                              ? 'text-white/80'
-                              : 'text-white/30'
+                                ? "text-white/80"
+                                : "text-white/30"
                           }`}
                         >
                           {step.title}
@@ -352,7 +539,7 @@ export default function AIProcessingLoader({
                         {isActiveStep && (
                           <motion.p
                             initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
+                            animate={{ opacity: 1, height: "auto" }}
                             className="text-xs text-white/50 mt-0.5 line-clamp-1"
                           >
                             {step.desc}
@@ -360,7 +547,7 @@ export default function AIProcessingLoader({
                         )}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -371,7 +558,7 @@ export default function AIProcessingLoader({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
             className="w-full max-w-md bg-brand-surface/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl relative overflow-hidden flex flex-col items-center justify-center text-center space-y-6"
           >
             {/* Soft background glow */}
@@ -384,13 +571,22 @@ export default function AIProcessingLoader({
                 className="absolute inset-0 rounded-full border-2 border-brand-500/30"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1.3, opacity: [0.6, 0] }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  ease: "easeOut",
+                }}
               />
               <motion.div
                 className="w-16 h-16 rounded-full bg-brand-500/10 border-2 border-brand-500 flex items-center justify-center text-brand-400"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15,
+                  delay: 0.1,
+                }}
               >
                 <svg
                   className="w-8 h-8 stroke-current"
@@ -404,7 +600,7 @@ export default function AIProcessingLoader({
                     d="M20 6L9 17L4 12"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.6, ease: 'easeOut', delay: 0.4 }}
+                    transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
                   />
                 </svg>
               </motion.div>
@@ -423,5 +619,5 @@ export default function AIProcessingLoader({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
