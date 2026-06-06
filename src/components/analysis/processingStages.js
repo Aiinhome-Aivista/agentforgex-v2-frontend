@@ -180,14 +180,14 @@ export const STAGES = [
   },
   {
     id: 4,
-    title: "Building Knowledge Graph",
-    desc: "Mapping entities and relationships...",
+    title: "Reviewing Information",
+    desc: "Organizing and understanding the uploaded content...",
     progress: 50,
   },
   {
     id: 5,
-    title: "Creating AI Embeddings",
-    desc: "Converting knowledge into vectors...",
+    title: "Identifying Key Processes",
+    desc: "Discovering important activities, workflows, and business operations...",
     progress: 65,
   },
   {
