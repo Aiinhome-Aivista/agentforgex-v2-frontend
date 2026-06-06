@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
+import avatarVideo from "../../assets/now_instead_of_robot_do_this_a.mp4";
 
 const STEPS = [
   {
@@ -60,50 +61,23 @@ const STEPS = [
   },
 ];
 
-// Custom knowledge graph coordinates inside a 300x300 viewBox
-const CORE_NODE = [150, 150];
-const SURROUNDING_NODES = [
-  [90, 90], // Node 1
-  [210, 90], // Node 2
-  [210, 210], // Node 3
-  [90, 210], // Node 4
-  [150, 60], // Node 5
-  [240, 150], // Node 6
-  [150, 240], // Node 7
-  [60, 150], // Node 8
-];
+const STAGES = {
+  "0.0": { glow: "rgba(16, 185, 129, 0.35)", border: "#10b981", text: "text-emerald-400" },
+  "1.8": { glow: "rgba(6, 182, 212, 0.35)", border: "#06b6d4", text: "text-cyan-400" },
+  "3.8": { glow: "rgba(245, 158, 11, 0.35)", border: "#f59e0b", text: "text-amber-400" },
+  "5.8": { glow: "rgba(139, 92, 246, 0.35)", border: "#8b5cf6", text: "text-violet-400" },
+  "7.8": { glow: "rgba(244, 63, 94, 0.35)", border: "#f43f5e", text: "text-pink-400" },
+};
 
-const LINKS = [
-  { from: CORE_NODE, to: SURROUNDING_NODES[0] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[1] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[2] },
-  { from: CORE_NODE, to: SURROUNDING_NODES[3] },
-  { from: SURROUNDING_NODES[0], to: SURROUNDING_NODES[4] },
-  { from: SURROUNDING_NODES[0], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[1], to: SURROUNDING_NODES[4] },
-  { from: SURROUNDING_NODES[1], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[2], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[2], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[3], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[3], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[4], to: SURROUNDING_NODES[5] },
-  { from: SURROUNDING_NODES[5], to: SURROUNDING_NODES[6] },
-  { from: SURROUNDING_NODES[6], to: SURROUNDING_NODES[7] },
-  { from: SURROUNDING_NODES[7], to: SURROUNDING_NODES[4] },
-];
-
-const NODES = [
-  [70, 60], [105, 45], [150, 52], [185, 78],
-  [60, 100], [98, 92], [138, 88], [175, 112],
-  [78, 138], [118, 130], [158, 132], [188, 150],
-  [95, 168], [140, 168],
-];
-
-const LINKS_BRAIN = [
-  [0, 1], [1, 2], [2, 3], [0, 4], [1, 5], [2, 6], [3, 7],
-  [4, 5], [5, 6], [6, 7], [4, 8], [5, 9], [6, 10], [7, 11],
-  [8, 9], [9, 10], [10, 11], [8, 12], [9, 12], [10, 13], [11, 13],
-  [12, 13], [5, 8], [6, 9], [2, 5],
+const PARTICLES = [
+  { id: 1, left: "12%", delay: "0s", size: "4px", speed: "3.5s" },
+  { id: 2, left: "28%", delay: "1.2s", size: "5px", speed: "4.5s" },
+  { id: 3, left: "42%", delay: "0.6s", size: "3px", speed: "3.0s" },
+  { id: 4, left: "58%", delay: "2.0s", size: "6px", speed: "4.0s" },
+  { id: 5, left: "72%", delay: "0.9s", size: "4px", speed: "5.0s" },
+  { id: 6, left: "88%", delay: "0.3s", size: "5px", speed: "3.6s" },
+  { id: 7, left: "22%", delay: "2.5s", size: "3px", speed: "3.8s" },
+  { id: 8, left: "78%", delay: "1.5s", size: "4px", speed: "4.2s" },
 ];
 
 export default function AIProcessingLoader({
@@ -114,14 +88,65 @@ export default function AIProcessingLoader({
   const [activeStep, setActiveStep] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const stepDuration = duration / STEPS.length;
+  const size = 210;
 
-  const size = 220;
-  const linkPaths = useMemo(
-    () => LINKS_BRAIN.map(([a, b]) => ({
-      x1: NODES[a][0], y1: NODES[a][1], x2: NODES[b][0], y2: NODES[b][1],
-    })),
-    []
-  );
+  const videoRef = useRef(null);
+
+  const range = useMemo(() => {
+    switch (activeStep) {
+      case 0:
+      case 1:
+      case 2:
+        return [0.0, 1.8]; // Understanding Process
+      case 3:
+        return [1.8, 3.8]; // Analyzing Workflow
+      case 6:
+        return [3.8, 5.8]; // Identifying Bottlenecks
+      case 4:
+      case 5:
+      case 7:
+        return [5.8, 7.8]; // Building Knowledge Graph
+      case 8:
+        return [7.8, 9.8]; // Generating Insights
+      default:
+        return [0.0, 1.8];
+    }
+  }, [activeStep]);
+
+  const activeStage = useMemo(() => {
+    const key = range[0].toFixed(1);
+    return STAGES[key] || STAGES["0.0"];
+  }, [range]);
+
+  // Sync segment playback on step changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const [start, end] = range;
+    const buffer = 0.3;
+
+    if (video.currentTime < start - buffer || video.currentTime > end + buffer) {
+      video.currentTime = start;
+    }
+
+    let frameId;
+    const checkTime = () => {
+      if (!video) return;
+      const endLimit = Math.min(end, video.duration || 9.8);
+      if (video.currentTime >= endLimit) {
+        video.currentTime = start;
+      }
+      frameId = requestAnimationFrame(checkTime);
+    };
+
+    if (video.paused) {
+      video.play().catch((err) => console.log("Autoplay warning:", err));
+    }
+
+    frameId = requestAnimationFrame(checkTime);
+    return () => cancelAnimationFrame(frameId);
+  }, [range]);
 
   // Ref to track if we've already fired onComplete to avoid duplicates
   const completeFired = useRef(false);
@@ -173,27 +198,34 @@ export default function AIProcessingLoader({
   return (
     <div className="afx-think w-full flex items-center justify-center p-4 min-h-[500px]">
       <style>{`
-        @keyframes afxPulseNode {
-          0%, 100% { opacity: .35; transform: scale(.8); }
-          50%      { opacity: 1;   transform: scale(1.35); }
+        @keyframes floatUp {
+          0% {
+            transform: translateY(120%) scale(0.6);
+            opacity: 0;
+          }
+          30% {
+            opacity: 0.8;
+          }
+          70% {
+            opacity: 0.8;
+          }
+          100% {
+            transform: translateY(-160px) scale(1.1);
+            opacity: 0;
+          }
         }
-        @keyframes afxDash {
-          to { stroke-dashoffset: -40; }
+        @keyframes scannerLine {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
         }
-        @keyframes afxRing {
-          0%   { transform: rotate(0deg);   opacity: .5; }
-          50%  { opacity: 1; }
-          100% { transform: rotate(360deg); opacity: .5; }
+        @keyframes pulseGlow {
+          0%, 100% { transform: scale(0.95); opacity: 0.55; }
+          50% { transform: scale(1.05); opacity: 0.85; }
         }
-        @keyframes afxFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-6px); }
+        .animate-float-particle {
+          animation: floatUp var(--speed, 4s) ease-in-out infinite;
+          animation-delay: var(--delay, 0s);
         }
-        .afx-think .afx-node { transform-box: fill-box; transform-origin: center;
-          animation: afxPulseNode 2.4s ease-in-out infinite; }
-        .afx-think .afx-link { stroke-dasharray: 6 14;
-          animation: afxDash 1.4s linear infinite; }
-        .afx-think .afx-brain { animation: afxFloat 4s ease-in-out infinite; }
       `}</style>
       <AnimatePresence mode="wait">
         {!isCompleted ? (
@@ -211,209 +243,124 @@ export default function AIProcessingLoader({
 
             {/* Left Column: Network Visualization & Core Step Info */}
             <div className="w-full md:w-1/2 flex flex-col items-center justify-center space-y-6">
-              {/* Central Knowledge Graph */}
-              <div className="relative w-[260px] h-[260px] flex items-center justify-center">
-                {/* Glow ring in the background */}
-                <div className="absolute w-[200px] h-[200px] rounded-full bg-brand-500/5 blur-xl animate-pulse" />
+              {/* Central Knowledge Graph / Avatar Video */}
+              <div 
+                className="relative w-full transition-all duration-500 ease-in-out rounded-2xl animate-fade-in"
+                style={{ maxWidth: '380px', aspectRatio: '16/9' }}
+              >
+                {/* Soft dynamic glow background */}
+                <div
+                  className="absolute inset-[-10px] rounded-2xl blur-3xl transition-all duration-700 ease-in-out"
+                  style={{
+                    background: `radial-gradient(circle, ${activeStage.glow}, transparent 75%)`,
+                    animation: 'pulseGlow 3s ease-in-out infinite',
+                  }}
+                />
 
-                {/* <svg className="w-full h-full relative" viewBox="0 0 300 300">
-                  <defs>
-                    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </radialGradient>
-                    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#6ee7b7" />
-                      <stop offset="100%" stopColor="#047857" />
-                    </radialGradient>
-                  </defs>
-
-                  <motion.g
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 40,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    style={{ transformOrigin: "150px 150px" }}
-                  >
-                    {LINKS.map((link, idx) => (
-                      <line
-                        key={`link-${idx}`}
-                        x1={link.from[0]}
-                        y1={link.from[1]}
-                        x2={link.to[0]}
-                        y2={link.to[1]}
-                        className="stroke-white/10"
-                        strokeWidth="1.5"
-                      />
-                    ))}
-
-                    {LINKS.map((link, idx) => (
-                      <motion.circle
-                        key={`particle-${idx}`}
-                        r="3"
-                        fill="#34d399"
-                        style={{ filter: "drop-shadow(0 0 4px #10b981)" }}
-                        animate={{
-                          cx: [link.from[0], link.to[0]],
-                          cy: [link.from[1], link.to[1]],
-                        }}
-                        transition={{
-                          duration: 2.2 + (idx % 3) * 0.4,
-                          repeat: Infinity,
-                          ease: "linear",
-                          delay: (idx * 0.15) % 2,
-                        }}
-                      />
-                    ))}
-
-                    {SURROUNDING_NODES.map((node, idx) => (
-                      <g key={`node-grp-${idx}`}>
-                        
-                        <motion.circle
-                          cx={node[0]}
-                          cy={node[1]}
-                          r="7"
-                          fill="rgba(16, 185, 129, 0.2)"
-                          animate={{
-                            scale: [1, 1.5, 1],
-                            opacity: [0.4, 0, 0.4],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            delay: idx * 0.25,
-                          }}
-                        />
-
-                        <circle
-                          cx={node[0]}
-                          cy={node[1]}
-                          r="4.5"
-                          fill="url(#nodeGlow)"
-                        />
-                      </g>
-                    ))}
-
-                    <g>
-                      {[1, 2, 3].map((i) => (
-                        <motion.circle
-                          key={`ripple-${i}`}
-                          cx={CORE_NODE[0]}
-                          cy={CORE_NODE[1]}
-                          r="12"
-                          fill="none"
-                          stroke="rgba(16, 185, 129, 0.3)"
-                          strokeWidth="1"
-                          animate={{
-                            scale: [1, 2.6, 1],
-                            opacity: [0.5, 0, 0.5],
-                          }}
-                          transition={{
-                            duration: 3,
-                            repeat: Infinity,
-                            delay: i * 0.9,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
-                      <motion.circle
-                        cx={CORE_NODE[0]}
-                        cy={CORE_NODE[1]}
-                        r="9.5"
-                        fill="url(#coreGlow)"
-                        animate={{ scale: [1, 1.15, 1] }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      />
-                    </g>
-                  </motion.g>
-                </svg> */}
-
+                {/* Orbiting dashed hologram frame (outer) */}
                 <svg
-                  className="afx-brain relative"
-                  viewBox="0 0 240 200"
-                  width={size}
-                  height={size}
+                  className="absolute inset-[-12px] pointer-events-none"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  style={{ width: 'calc(100% + 24px)', height: 'calc(100% + 24px)' }}
                 >
-                  <defs>
-                    <radialGradient id="afxNodeGrad" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#6ee7b7" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </radialGradient>
-                    <linearGradient
-                      id="afxBrainStroke"
-                      x1="0"
-                      y1="0"
-                      x2="1"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#22d3ee" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Brain silhouette */}
-                  <path
-                    d="M120 24
-               C150 8 196 14 206 52
-               C228 60 230 104 206 120
-               C214 150 188 184 150 178
-               C138 192 102 192 90 178
-               C52 184 26 150 34 120
-               C10 104 12 60 34 52
-               C44 14 90 8 120 24 Z"
-                    fill="rgba(16,185,129,0.05)"
-                    stroke="url(#afxBrainStroke)"
-                    strokeWidth="1.5"
-                    strokeOpacity="0.55"
-                  />
-                  {/* Central fissure */}
-                  <path
-                    d="M120 24 C116 70 124 120 120 178"
+                  <rect
+                    x="1"
+                    y="1"
+                    width="98"
+                    height="98"
+                    rx="5"
                     fill="none"
-                    stroke="url(#afxBrainStroke)"
-                    strokeWidth="1.2"
-                    strokeOpacity="0.4"
+                    stroke={activeStage.border}
+                    strokeWidth="0.8"
+                    strokeDasharray="4 8"
+                    className="transition-all duration-700 ease-in-out opacity-60"
+                  />
+                </svg>
+
+                {/* Orbiting dashed hologram frame (inner) */}
+                <svg
+                  className="absolute inset-[-6px] pointer-events-none"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  style={{ width: 'calc(100% + 12px)', height: 'calc(100% + 12px)' }}
+                >
+                  <rect
+                    x="1"
+                    y="1"
+                    width="98"
+                    height="98"
+                    rx="4"
+                    fill="none"
+                    stroke={activeStage.border}
+                    strokeWidth="0.4"
+                    strokeDasharray="2 4"
+                    className="transition-all duration-700 ease-in-out opacity-40 animate-[pulse_2s_infinite]"
+                  />
+                </svg>
+
+                {/* Holographic binary data streams on left/right edges */}
+                <div className="absolute left-[-18px] top-4 bottom-4 w-3 overflow-hidden pointer-events-none opacity-20 flex flex-col items-center justify-between text-[7px] font-mono text-white select-none">
+                  <span className="animate-[pulse_1.5s_infinite]">1</span>
+                  <span className="animate-[pulse_2s_infinite_0.3s]">0</span>
+                  <span className="animate-[pulse_1.2s_infinite_0.6s]">1</span>
+                  <span className="animate-[pulse_2.5s_infinite_0.1s]">1</span>
+                  <span className="animate-[pulse_1.8s_infinite_0.4s]">0</span>
+                </div>
+                <div className="absolute right-[-18px] top-4 bottom-4 w-3 overflow-hidden pointer-events-none opacity-20 flex flex-col items-center justify-between text-[7px] font-mono text-white select-none">
+                  <span className="animate-[pulse_2s_infinite_0.2s]">0</span>
+                  <span className="animate-[pulse_1.4s_infinite_0.5s]">1</span>
+                  <span className="animate-[pulse_1.7s_infinite_0.1s]">0</span>
+                  <span className="animate-[pulse_2.2s_infinite_0.7s]">1</span>
+                  <span className="animate-[pulse_1.5s_infinite_0.3s]">0</span>
+                </div>
+
+                {/* Floating knowledge particles */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                  {PARTICLES.map((p) => (
+                    <div
+                      key={p.id}
+                      className="absolute bottom-0 rounded-full animate-float-particle"
+                      style={{
+                        left: p.left,
+                        width: p.size,
+                        height: p.size,
+                        backgroundColor: activeStage.border,
+                        boxShadow: `0 0 8px ${activeStage.border}`,
+                        opacity: 0.6,
+                        '--speed': p.speed,
+                        '--delay': p.delay,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Video Rectangle Container */}
+                <div className="w-full h-full rounded-2xl overflow-hidden border border-white/15 bg-brand-dark/40 backdrop-blur-md relative flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    src={avatarVideo}
+                    muted
+                    playsInline
+                    autoPlay
+                    className="w-full h-full object-cover opacity-95"
                   />
 
-                  {/* Synapse links */}
-                  <g>
-                    {linkPaths.map((l, i) => (
-                      <line
-                        key={i}
-                        className="afx-link"
-                        x1={l.x1}
-                        y1={l.y1}
-                        x2={l.x2}
-                        y2={l.y2}
-                        stroke="#10b981"
-                        strokeWidth="1"
-                        strokeOpacity="0.55"
-                        style={{ animationDelay: `${(i % 7) * 0.18}s` }}
-                      />
-                    ))}
-                  </g>
-
-                  {/* Neural nodes */}
-                  <g>
-                    {NODES.map(([x, y], i) => (
-                      <circle
-                        key={i}
-                        className="afx-node"
-                        cx={x}
-                        cy={y}
-                        r={i % 3 === 0 ? 4.5 : 3.2}
-                        fill="url(#afxNodeGrad)"
-                        style={{ animationDelay: `${(i % 6) * 0.32}s` }}
-                      />
-                    ))}
-                  </g>
-                </svg>
+                  {/* Scanner horizontal line overlay */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                    <div
+                      className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-30"
+                      style={{ animation: 'scannerLine 4.5s linear infinite' }}
+                    />
+                    {/* Subtle sci-fi vignette */}
+                    <div
+                      className="absolute inset-0 rounded-2xl mix-blend-overlay pointer-events-none"
+                      style={{
+                        background: `radial-gradient(circle, transparent 65%, ${activeStage.glow} 100%)`,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Step Info Box */}
@@ -446,10 +393,13 @@ export default function AIProcessingLoader({
                 <div className="space-y-2 mt-4 max-w-xs mx-auto">
                   <div className="w-full h-1.5 rounded-full bg-white/5 border border-white/10 overflow-hidden relative">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full"
+                      className="h-full rounded-full"
+                      style={{
+                        background: `linear-gradient(to right, ${activeStage.border}, #22d3ee)`,
+                        boxShadow: `0 0 10px ${activeStage.border}`,
+                      }}
                       animate={{ width: `${STEPS[activeStep].progress}%` }}
                       transition={{ duration: 0.5, ease: "easeOut" }}
-                      style={{ boxShadow: "0 0 10px rgba(16, 185, 129, 0.4)" }}
                     />
                   </div>
                   <div className="flex justify-between items-center text-xs font-mono text-white/40">

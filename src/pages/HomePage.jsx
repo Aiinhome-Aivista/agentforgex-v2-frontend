@@ -62,7 +62,7 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 // phase: 'idle' | 'thinking' | 'chat' | 'finalizing'
 export default function HomePage() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState("idle");
+  const [phase, setPhase] = useState("thinking");
   const [error, setError] = useState("");
   const [baseGraph, setBaseGraph] = useState(null);
   const [sessionId, setSessionId] = useState(null);

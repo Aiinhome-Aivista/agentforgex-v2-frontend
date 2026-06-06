@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import avatarVideo from '../../assets/now_instead_of_robot_do_this_a.mp4'
 
 /**
  * AIThinkingPhase
  * ─────────────────────────────────────────────────────────────────────────
- * A self-contained "AI is thinking" animation: a pulsing neural brain with
- * traveling synapse pulses, an orbiting glow, and a rotating status word.
+ * A modern AI assistant character with subtle active thinking animations,
+ * rotating hologram rings, dynamic glowing colors synced to stages, and
+ * animated floating knowledge particles.
  *
  * Props:
  *   words     {string[]}  rotating status phrases
  *   title     {string}    headline above the word (default: "AI is thinking")
  *   subtitle  {string}    small line under the rotating word
- *   compact   {boolean}   smaller brain (used for the final "synthesizing" pass)
+ *   compact   {boolean}   smaller size
  */
 const DEFAULT_WORDS = [
   'Analyzing',
@@ -21,21 +23,42 @@ const DEFAULT_WORDS = [
   'Computing results',
 ]
 
-// Neural nodes positioned inside the brain silhouette (viewBox 0 0 240 200)
-const NODES = [
-  [70, 60], [105, 45], [150, 52], [185, 78],
-  [60, 100], [98, 92], [138, 88], [175, 112],
-  [78, 138], [118, 130], [158, 132], [188, 150],
-  [95, 168], [140, 168],
+const STAGES = {
+  '0.0': { glow: 'rgba(16, 185, 129, 0.35)', border: '#10b981', text: 'text-emerald-400' },
+  '1.8': { glow: 'rgba(6, 182, 212, 0.35)', border: '#06b6d4', text: 'text-cyan-400' },
+  '3.8': { glow: 'rgba(245, 158, 11, 0.35)', border: '#f59e0b', text: 'text-amber-400' },
+  '5.8': { glow: 'rgba(139, 92, 246, 0.35)', border: '#8b5cf6', text: 'text-violet-400' },
+  '7.8': { glow: 'rgba(244, 63, 94, 0.35)', border: '#f43f5e', text: 'text-pink-400' },
+}
+
+const PARTICLES = [
+  { id: 1, left: '12%', delay: '0s', size: '4px', speed: '3.5s' },
+  { id: 2, left: '28%', delay: '1.2s', size: '5px', speed: '4.5s' },
+  { id: 3, left: '42%', delay: '0.6s', size: '3px', speed: '3.0s' },
+  { id: 4, left: '58%', delay: '2.0s', size: '6px', speed: '4.0s' },
+  { id: 5, left: '72%', delay: '0.9s', size: '4px', speed: '5.0s' },
+  { id: 6, left: '88%', delay: '0.3s', size: '5px', speed: '3.6s' },
+  { id: 7, left: '22%', delay: '2.5s', size: '3px', speed: '3.8s' },
+  { id: 8, left: '78%', delay: '1.5s', size: '4px', speed: '4.2s' },
 ]
 
-// Synapse connections between node indices
-const LINKS = [
-  [0, 1], [1, 2], [2, 3], [0, 4], [1, 5], [2, 6], [3, 7],
-  [4, 5], [5, 6], [6, 7], [4, 8], [5, 9], [6, 10], [7, 11],
-  [8, 9], [9, 10], [10, 11], [8, 12], [9, 12], [10, 13], [11, 13],
-  [12, 13], [5, 8], [6, 9], [2, 5],
-]
+const getSegmentForWord = (word) => {
+  if (!word) return [0.0, 1.8];
+  const w = word.toLowerCase();
+  if (w.includes('analyz') || w.includes('workfl') || w.includes('map')) {
+    return [1.8, 3.8];
+  }
+  if (w.includes('bottleneck') || w.includes('problem') || w.includes('issue')) {
+    return [3.8, 5.8];
+  }
+  if (w.includes('embed') || w.includes('stor') || w.includes('reason') || w.includes('concept') || w.includes('knowl') || w.includes('graph') || w.includes('synthes') || w.includes('reconcil')) {
+    return [5.8, 7.8];
+  }
+  if (w.includes('generat') || w.includes('insight') || w.includes('result') || w.includes('final') || w.includes('comput')) {
+    return [7.8, 9.8];
+  }
+  return [0.0, 1.8];
+}
 
 export default function AIThinkingPhase({
   words = DEFAULT_WORDS,
@@ -45,6 +68,7 @@ export default function AIThinkingPhase({
 }) {
   const [wordIdx, setWordIdx] = useState(0)
   const containerRef = useRef(null)
+  const videoRef = useRef(null)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -60,125 +84,211 @@ export default function AIThinkingPhase({
     return () => clearTimeout(timer)
   }, [])
 
-  const size = compact ? 150 : 220
-  const linkPaths = useMemo(
-    () => LINKS.map(([a, b]) => ({
-      x1: NODES[a][0], y1: NODES[a][1], x2: NODES[b][0], y2: NODES[b][1],
-    })),
-    []
-  )
+  const currentWord = words[wordIdx] || ''
+  const range = useMemo(() => getSegmentForWord(currentWord), [currentWord])
+  
+  const activeStage = useMemo(() => {
+    const key = range[0].toFixed(1);
+    return STAGES[key] || STAGES['0.0'];
+  }, [range])
+
+  // Custom looping mechanism to loop video segments matching stages
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const [start, end] = range;
+    const buffer = 0.3;
+
+    // If we're out of bounds, jump to the start of the current segment
+    if (video.currentTime < start - buffer || video.currentTime > end + buffer) {
+      video.currentTime = start;
+    }
+
+    let frameId;
+    const checkTime = () => {
+      if (!video) return;
+      const endLimit = Math.min(end, video.duration || 9.8);
+      if (video.currentTime >= endLimit) {
+        video.currentTime = start;
+      }
+      frameId = requestAnimationFrame(checkTime);
+    };
+
+    if (video.paused) {
+      video.play().catch((err) => console.log('Autoplay warning:', err));
+    }
+
+    frameId = requestAnimationFrame(checkTime);
+    return () => cancelAnimationFrame(frameId);
+  }, [range])
+
+  const size = compact ? 140 : 210
 
   return (
     <div ref={containerRef} className="afx-think w-full flex flex-col items-center justify-center py-12 select-none animate-fade-in">
       <style>{`
-        @keyframes afxPulseNode {
-          0%, 100% { opacity: .35; transform: scale(.8); }
-          50%      { opacity: 1;   transform: scale(1.35); }
+        @keyframes floatUp {
+          0% {
+            transform: translateY(120%) scale(0.6);
+            opacity: 0;
+          }
+          30% {
+            opacity: 0.8;
+          }
+          70% {
+            opacity: 0.8;
+          }
+          100% {
+            transform: translateY(-160px) scale(1.1);
+            opacity: 0;
+          }
         }
-        @keyframes afxDash {
-          to { stroke-dashoffset: -40; }
+        @keyframes scannerLine {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
         }
-        @keyframes afxRing {
-          0%   { transform: rotate(0deg);   opacity: .5; }
-          50%  { opacity: 1; }
-          100% { transform: rotate(360deg); opacity: .5; }
+        @keyframes pulseGlow {
+          0%, 100% { transform: scale(0.95); opacity: 0.55; }
+          50% { transform: scale(1.05); opacity: 0.85; }
         }
-        @keyframes afxFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-6px); }
-        }
-        @keyframes afxWordIn {
+        @keyframes wordIn {
           from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
           to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
         }
-        @keyframes afxBar {
+        @keyframes barProgress {
           0%   { transform: scaleX(0); transform-origin: left; }
           50%  { transform: scaleX(1); transform-origin: left; }
           50.01% { transform-origin: right; }
           100% { transform: scaleX(0); transform-origin: right; }
         }
-        .afx-think .afx-node { transform-box: fill-box; transform-origin: center;
-          animation: afxPulseNode 2.4s ease-in-out infinite; }
-        .afx-think .afx-link { stroke-dasharray: 6 14;
-          animation: afxDash 1.4s linear infinite; }
-        .afx-think .afx-brain { animation: afxFloat 4s ease-in-out infinite; }
-        .afx-think .afx-ring  { transform-origin: 50% 50%;
-          animation: afxRing 9s linear infinite; }
+        .animate-float-particle {
+          animation: floatUp var(--speed, 4s) ease-in-out infinite;
+          animation-delay: var(--delay, 0s);
+        }
       `}</style>
 
-      {/* Brain */}
-      <div className="relative" style={{ width: size, height: size }}>
-        {/* Soft glow */}
+      {/* Avatar Container */}
+      <div 
+        className="relative w-full transition-all duration-500 ease-in-out rounded-2xl animate-fade-in" 
+        style={{ 
+          maxWidth: compact ? '280px' : '400px', 
+          aspectRatio: '16/9'
+        }}
+      >
+        {/* Soft dynamic glow background */}
         <div
-          className="absolute inset-0 rounded-full blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(16,185,129,.35), transparent 65%)' }}
+          className="absolute inset-[-10px] rounded-2xl blur-3xl transition-all duration-700 ease-in-out"
+          style={{
+            background: `radial-gradient(circle, ${activeStage.glow}, transparent 75%)`,
+            animation: 'pulseGlow 3s ease-in-out infinite',
+          }}
         />
-        {/* Orbiting dashed ring */}
-        <svg className="afx-ring absolute inset-0" viewBox="0 0 240 240" width={size} height={size}>
-          <circle cx="120" cy="120" r="108" fill="none"
-            stroke="rgba(16,185,129,.35)" strokeWidth="1.5" strokeDasharray="3 12" />
-        </svg>
 
-        {/* Neural brain */}
-        <svg className="afx-brain relative" viewBox="0 0 240 200" width={size} height={size}>
-          <defs>
-            <radialGradient id="afxNodeGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%"  stopColor="#6ee7b7" />
-              <stop offset="100%" stopColor="#10b981" />
-            </radialGradient>
-            <linearGradient id="afxBrainStroke" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%"  stopColor="#34d399" />
-              <stop offset="100%" stopColor="#22d3ee" />
-            </linearGradient>
-          </defs>
-
-          {/* Brain silhouette */}
-          <path
-            d="M120 24
-               C150 8 196 14 206 52
-               C228 60 230 104 206 120
-               C214 150 188 184 150 178
-               C138 192 102 192 90 178
-               C52 184 26 150 34 120
-               C10 104 12 60 34 52
-               C44 14 90 8 120 24 Z"
-            fill="rgba(16,185,129,0.05)"
-            stroke="url(#afxBrainStroke)"
-            strokeWidth="1.5"
-            strokeOpacity="0.55"
+        {/* Orbiting dashed hologram frame (outer) */}
+        <svg
+          className="absolute inset-[-12px] pointer-events-none"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          style={{ width: 'calc(100% + 24px)', height: 'calc(100% + 24px)' }}
+        >
+          <rect
+            x="1"
+            y="1"
+            width="98"
+            height="98"
+            rx="5"
+            fill="none"
+            stroke={activeStage.border}
+            strokeWidth="0.8"
+            strokeDasharray="4 8"
+            className="transition-all duration-700 ease-in-out opacity-60"
           />
-          {/* Central fissure */}
-          <path d="M120 24 C116 70 124 120 120 178" fill="none"
-            stroke="url(#afxBrainStroke)" strokeWidth="1.2" strokeOpacity="0.4" />
-
-          {/* Synapse links */}
-          <g>
-            {linkPaths.map((l, i) => (
-              <line
-                key={i}
-                className="afx-link"
-                x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                stroke="#10b981"
-                strokeWidth="1"
-                strokeOpacity="0.55"
-                style={{ animationDelay: `${(i % 7) * 0.18}s` }}
-              />
-            ))}
-          </g>
-
-          {/* Neural nodes */}
-          <g>
-            {NODES.map(([x, y], i) => (
-              <circle
-                key={i}
-                className="afx-node"
-                cx={x} cy={y} r={i % 3 === 0 ? 4.5 : 3.2}
-                fill="url(#afxNodeGrad)"
-                style={{ animationDelay: `${(i % 6) * 0.32}s` }}
-              />
-            ))}
-          </g>
         </svg>
+
+        {/* Orbiting dashed hologram frame (inner) */}
+        <svg
+          className="absolute inset-[-6px] pointer-events-none"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          style={{ width: 'calc(100% + 12px)', height: 'calc(100% + 12px)' }}
+        >
+          <rect
+            x="1"
+            y="1"
+            width="98"
+            height="98"
+            rx="4"
+            fill="none"
+            stroke={activeStage.border}
+            strokeWidth="0.4"
+            strokeDasharray="2 4"
+            className="transition-all duration-700 ease-in-out opacity-40 animate-[pulse_2s_infinite]"
+          />
+        </svg>
+
+        {/* Holographic binary data streams on left/right edges */}
+        <div className="absolute left-[-20px] top-4 bottom-4 w-3 overflow-hidden pointer-events-none opacity-20 flex flex-col items-center justify-between text-[7px] font-mono text-white select-none">
+          <span className="animate-[pulse_1.5s_infinite]">1</span>
+          <span className="animate-[pulse_2s_infinite_0.3s]">0</span>
+          <span className="animate-[pulse_1.2s_infinite_0.6s]">1</span>
+          <span className="animate-[pulse_2.5s_infinite_0.1s]">1</span>
+          <span className="animate-[pulse_1.8s_infinite_0.4s]">0</span>
+        </div>
+        <div className="absolute right-[-20px] top-4 bottom-4 w-3 overflow-hidden pointer-events-none opacity-20 flex flex-col items-center justify-between text-[7px] font-mono text-white select-none">
+          <span className="animate-[pulse_2s_infinite_0.2s]">0</span>
+          <span className="animate-[pulse_1.4s_infinite_0.5s]">1</span>
+          <span className="animate-[pulse_1.7s_infinite_0.1s]">0</span>
+          <span className="animate-[pulse_2.2s_infinite_0.7s]">1</span>
+          <span className="animate-[pulse_1.5s_infinite_0.3s]">0</span>
+        </div>
+
+        {/* Floating knowledge particles */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+          {PARTICLES.map((p) => (
+            <div
+              key={p.id}
+              className="absolute bottom-0 rounded-full animate-float-particle"
+              style={{
+                left: p.left,
+                width: p.size,
+                height: p.size,
+                backgroundColor: activeStage.border,
+                boxShadow: `0 0 8px ${activeStage.border}`,
+                opacity: 0.6,
+                '--speed': p.speed,
+                '--delay': p.delay,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Video Container (Rectangle) */}
+        <div className="w-full h-full rounded-2xl overflow-hidden border border-white/15 bg-brand-dark/40 backdrop-blur-md relative flex items-center justify-center">
+          <video
+            ref={videoRef}
+            src={avatarVideo}
+            muted
+            playsInline
+            autoPlay
+            className="w-full h-full object-cover opacity-95"
+          />
+
+          {/* Scanner horizontal line overlay */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+            <div
+              className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-30"
+              style={{ animation: 'scannerLine 4.5s linear infinite' }}
+            />
+            {/* Subtle sci-fi vignette */}
+            <div
+              className="absolute inset-0 rounded-2xl mix-blend-overlay pointer-events-none"
+              style={{
+                background: `radial-gradient(circle, transparent 65%, ${activeStage.glow} 100%)`,
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Status text */}
@@ -190,7 +300,7 @@ export default function AIThinkingPhase({
           <span
             key={wordIdx}
             className="text-2xl font-black gradient-text"
-            style={{ animation: 'afxWordIn .5s ease-out' }}
+            style={{ animation: 'wordIn .5s ease-out' }}
           >
             {words[wordIdx]}
             <span className="text-brand-400">…</span>
@@ -203,8 +313,12 @@ export default function AIThinkingPhase({
         {/* Indeterminate progress bar */}
         <div className="mt-5 mx-auto w-48 h-1 rounded-full bg-white/5 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-brand-400 to-cyan-400 rounded-full"
-            style={{ animation: 'afxBar 1.8s ease-in-out infinite' }}
+            className="h-full rounded-full transition-all duration-700 ease-in-out"
+            style={{
+              background: `linear-gradient(to right, ${activeStage.border}, #22d3ee)`,
+              boxShadow: `0 0 8px ${activeStage.border}`,
+              animation: 'barProgress 1.8s ease-in-out infinite',
+            }}
           />
         </div>
       </div>
