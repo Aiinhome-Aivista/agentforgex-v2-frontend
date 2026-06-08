@@ -9,7 +9,7 @@ import {
   FileText,
 } from "lucide-react";
 import FileUploader from "../components/upload/FileUploader";
-import AIProcessingLoader from "../components/analysis/AIProcessingLoader";
+import AIAvatarExperience from "../components/analysis/AIAvatarExperience";
 import SMEChatPanel from "../components/analysis/SMEChatPanel";
 import { analyzeFiles, ingestBaseGraph, finalizeSme } from "../services/api";
 
@@ -175,13 +175,13 @@ export default function HomePage() {
       {/* Uploader section */}
       <div>
         {phase === "thinking" ? (
-          <AIProcessingLoader
+          <AIAvatarExperience
             duration={15000}
             isApiFinished={isIngestFinished}
             onComplete={() => setPhase("chat")}
           />
         ) : phase === "finalizing" ? (
-          <AIProcessingLoader
+          <AIAvatarExperience
             duration={15000}
             isApiFinished={isFinalizingFinished}
             onComplete={() => {
