@@ -162,7 +162,7 @@ export default function SMEChatPanel({ sessionId, baseGraph, onConfirmAnalyze, o
             </div>
             <div>
               <h3 className="font-bold text-white/90 text-sm leading-tight">
-                SME Knowledge Chat
+                Engagement Zone
               </h3>
               {/* <p className="text-[11px] text-white/40">
                 {typeof baseGraph?.node_count === 'number'
