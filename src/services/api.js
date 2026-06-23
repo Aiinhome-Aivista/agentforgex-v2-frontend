@@ -182,4 +182,13 @@ export const triggerReanalysis = (processKey, additionalContext) =>
     additional_context: additionalContext,
   })
 
+/**
+* Process Discovery Assistant — returns a gap analysis plus the highest-value
+* follow-up questions for a process. Used by the chatbot to proactively guide
+* the user when the panel is opened.
+*   → { status, process_key, summary, identified_gaps, follow_up_questions: [{question, reason}] }
+*/
+export const fetchProcessDiscovery = (processKey) =>
+  api.get(`/chatbot/${processKey}/discover`)
+
 export default api
