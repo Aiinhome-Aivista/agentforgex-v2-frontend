@@ -76,17 +76,32 @@ export default function HomePage() {
   const [isIngestFinished, setIsIngestFinished] = useState(false);
   const [isFinalizingFinished, setIsFinalizingFinished] = useState(false);
   const [finalResult, setFinalResult] = useState(null);
+  const [isIngesting, setIsIngesting] = useState(false);
 
   // Captured at analyze time so chat + final analysis use the same inputs.
   const filesRef = useRef([]);
   const userTextRef = useRef("");
   const phaseRef = useRef(null);
+  const loaderTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (loaderTimerRef.current) {
+        clearTimeout(loaderTimerRef.current);
+      }
+    };
+  }, []);
 
   const reset = () => {
     setPhase("idle");
     setError("");
     setBaseGraph(null);
     setSessionId(null);
+    setIsIngesting(false);
+    if (loaderTimerRef.current) {
+      clearTimeout(loaderTimerRef.current);
+      loaderTimerRef.current = null;
+    }
     filesRef.current = [];
     userTextRef.current = "";
     setResetKey((prev) => prev + 1);
@@ -107,12 +122,37 @@ export default function HomePage() {
     filesRef.current = files;
     userTextRef.current = userText;
     setIsIngestFinished(false);
-    setPhase("thinking");
+    setIsIngesting(true);
+
+    let apiCompleted = false;
+    let loaderShown = false;
+
+    if (loaderTimerRef.current) {
+      clearTimeout(loaderTimerRef.current);
+    }
+
+    loaderTimerRef.current = setTimeout(() => {
+      if (!apiCompleted) {
+        loaderShown = true;
+        setPhase("thinking");
+      }
+    }, 800);
+
     try {
       const res = await ingestBaseGraph(files, userText);
+      apiCompleted = true;
+      if (loaderTimerRef.current) {
+        clearTimeout(loaderTimerRef.current);
+        loaderTimerRef.current = null;
+      }
       setSessionId(res?.session_id || null);
       setBaseGraph(res || null);
       setIsIngestFinished(true);
+      setIsIngesting(false);
+
+      if (!loaderShown) {
+        setPhase("chat");
+      }
     } catch (err) {
       // New backend not reachable → fall back to the classic direct analysis.
       try {
@@ -122,6 +162,12 @@ export default function HomePage() {
           localStorage.setItem("session_id", result.session_id);
         navigate(`/analysis/${result.process.id}`, { state: { result } });
       } catch (e2) {
+        apiCompleted = true;
+        if (loaderTimerRef.current) {
+          clearTimeout(loaderTimerRef.current);
+          loaderTimerRef.current = null;
+        }
+        setIsIngesting(false);
         setError(e2.message || "Analysis failed. Please try again.");
         setPhase("idle");
       }
@@ -161,9 +207,9 @@ export default function HomePage() {
       setTimeout(() => {
         phaseRef.current?.scrollIntoView({
           behavior: "smooth",
-          block: "start",
+          block: phase === "chat" ? "start" : "center",
         });
-      }, 100);
+      }, 150);
     }
   }, [phase]);
 
@@ -186,7 +232,7 @@ export default function HomePage() {
       </div>
 
       {/* Uploader section */}
-      <div>
+      <div ref={phase === "thinking" || phase === "finalizing" ? phaseRef : null}>
         {phase === "thinking" ? (
           <AIProcessingLoader
             duration={15000}
@@ -207,8 +253,8 @@ export default function HomePage() {
           <FileUploader
             key={resetKey}
             onAnalyze={handleAnalyze}
-            loading={false}
-            disabled={phase !== "idle"}
+            loading={isIngesting}
+            disabled={phase !== "idle" || isIngesting}
           />
         )}
       </div>
