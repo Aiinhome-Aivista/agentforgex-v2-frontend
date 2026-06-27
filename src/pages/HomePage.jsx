@@ -12,6 +12,7 @@ import FileUploader from "../components/upload/FileUploader";
 import AIProcessingLoader from "../components/analysis/AIProcessingLoader";
 import SMEChatPanel from "../components/analysis/SMEChatPanel";
 import { analyzeFiles, ingestBaseGraph, finalizeSme } from "../services/api";
+import RobotIntro from "../components/onboarding/RobotIntro";
 
 const FEATURES = [
   {
@@ -59,9 +60,13 @@ const FINAL_WORDS = [
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+import { useAuth } from "../context/AuthContext";
+
 // phase: 'idle' | 'thinking' | 'chat' | 'finalizing'
 export default function HomePage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem("user_mission_vision_context"));
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [baseGraph, setBaseGraph] = useState(null);
@@ -89,7 +94,8 @@ export default function HomePage() {
 
   // Fallback: original single-shot behaviour (no SME loop).
   const runDirectAnalyze = async (files, userText) => {
-    const result = await analyzeFiles(files, userText);
+    const context = localStorage.getItem("user_mission_vision_context") || "";
+    const result = await analyzeFiles(files, userText, { missionVisionContext: context });
     if (result.session_id)
       localStorage.setItem("session_id", result.session_id);
     navigate(`/analysis/${result.process.id}`, { state: { result } });
@@ -110,7 +116,8 @@ export default function HomePage() {
     } catch (err) {
       // New backend not reachable → fall back to the classic direct analysis.
       try {
-        const result = await analyzeFiles(files, userText);
+        const context = localStorage.getItem("user_mission_vision_context") || "";
+        const result = await analyzeFiles(files, userText, { missionVisionContext: context });
         if (result.session_id)
           localStorage.setItem("session_id", result.session_id);
         navigate(`/analysis/${result.process.id}`, { state: { result } });
@@ -133,9 +140,11 @@ export default function HomePage() {
           /* best effort */
         }
       }
+      const context = localStorage.getItem("user_mission_vision_context") || "";
       const result = await analyzeFiles(filesRef.current, userTextRef.current, {
         sessionId,
         smeContext: transcript,
+        missionVisionContext: context,
       });
       if (result.session_id)
         localStorage.setItem("session_id", result.session_id);
@@ -157,6 +166,10 @@ export default function HomePage() {
       }, 100);
     }
   }, [phase]);
+
+  if (showIntro) {
+    return <RobotIntro onComplete={() => setShowIntro(false)} userName={user?.name || user?.email || ""} />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">

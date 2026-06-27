@@ -193,7 +193,7 @@ export default function AnalysisPage() {
       {/* DAgent — right-hand chat drawer */}
       <DAgentChatPanel
         open={dagentStage === 'open'}
-        sessionId={dagentSessionId}
+        processKey={id} 
         onClose={dismissDagent}
       />
 

@@ -1,78 +1,26 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import {
-  Bot, Send, Sparkles, X, Loader2, Database,
-} from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Bot, Send, Sparkles, X, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
-import { smeChat, getSuggestedQuestions } from '../../services/api'
+import ReactMarkdown from 'react-markdown'
+import { sendChatMessage, triggerReanalysis } from '../../services/api'
 
-/**
- * DAgentChatPanel
- * ─────────────────────────────────────────────────────────────────────────
- * Right-hand slide-in chat drawer ("DAgent AI Assistant") on the Analysis
- * page. Lets the user query their UPLOADED DATA (grounded in the session's
- * base knowledge graph via /sme/chat).
- *
- * Suggested questions are generated from the uploaded data and shown as
- * horizontally-scrollable pills above the composer, ordered by question
- * philosophy: all "What…" first, then "Where…", then "Why…", then the rest.
- *
- * Props:
- *   open      {boolean}
- *   sessionId {string|null}
- *   onClose   {()=>void}
- */
-const WH_ORDER = ['what', 'where', 'why']
-
-const FALLBACK_QUESTIONS = [
-  'What are the main entities in my uploaded data and what does each represent?',
-  'What key metrics or fields stand out in this dataset?',
-  'Where does each important field originate in the source files?',
-  'Why are these entities related the way they are?',
-]
-
-const whRank = (q) => {
-  const first = (q || '').trim().toLowerCase().split(/\s+/)[0]?.replace(/[',.?!:;]+$/, '')
-  const idx = WH_ORDER.indexOf(first)
-  return idx === -1 ? WH_ORDER.length : idx
-}
-
-/** Stable sort: What… → Where… → Why… → everything else. */
-const orderByPhilosophy = (questions) =>
-  questions
-    .map((q, i) => [q, i])
-    .sort((a, b) => whRank(a[0]) - whRank(b[0]) || a[1] - b[1])
-    .map(([q]) => q)
-
-export default function DAgentChatPanel({ open, sessionId, onClose }) {
+export default function DAgentChatPanel({ open, processKey, onClose }) {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
       content:
-        "Hi, I'm DAgent — your data assistant. I'm grounded in the data you uploaded, so ask me anything about it: what an entity means, where a field comes from, or why things connect.",
+        "Hi, I'm DAgent — your data assistant. Ask me anything about your process workflow, list the actors, or provide missing context to re-analyze the map.",
     },
   ])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [suggested, setSuggested] = useState([])
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+
+  // New state for the Re-Analyze Yes/No flow
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
+  const [pendingContext, setPendingContext] = useState(null)
 
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
-  const fetchedFor = useRef(null)
-
-  // Fetch data-grounded suggested questions once per session.
-  useEffect(() => {
-    if (!open || !sessionId || fetchedFor.current === sessionId) return
-    fetchedFor.current = sessionId
-    setLoadingSuggestions(true)
-    getSuggestedQuestions(sessionId)
-      .then(res => {
-        const qs = (res?.questions || []).filter(Boolean)
-        setSuggested(orderByPhilosophy(qs.length ? qs : FALLBACK_QUESTIONS))
-      })
-      .catch(() => setSuggested(orderByPhilosophy(FALLBACK_QUESTIONS)))
-      .finally(() => setLoadingSuggestions(false))
-  }, [open, sessionId])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -100,23 +48,38 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
     }
   }, [open])
 
-  const history = useMemo(
-    () =>
-      messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
-        content: m.content,
-      })),
-    [messages]
-  )
+  // Handles the actual API call to re-analyze the graph
+  const handleReanalyze = async (contextToUse) => {
+    setBusy(true)
+    setAwaitingConfirmation(false)
+    setPendingContext(null)
+    setMessages(m => [...m, { role: 'bot', content: 'Re-analyzing process map... This might take a moment.' }])
+    try {
+      const res = await triggerReanalysis(processKey, contextToUse)
+      if (res?.status) {
+        setMessages(m => [...m, { role: 'bot', content: 'Process map updated successfully! The page should refresh shortly.' }])
+        window.dispatchEvent(new CustomEvent('refresh-process-map'))
+      } else {
+        setMessages(m => [...m, { role: 'bot', content: 'Re-analysis failed. Please try again.' }])
+      }
+    } catch {
+      setMessages(m => [...m, { role: 'bot', content: 'Re-analysis failed.' }])
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const send = useCallback(async (text) => {
     const q = (text ?? input).trim()
     if (!q || busy) return
     setInput('')
+
     setMessages(m => [...m, { role: 'user', content: q }])
     setBusy(true)
+
     try {
-      const res = await smeChat(sessionId, q, history)
+      const res = await sendChatMessage(q, processKey, pendingContext)
+
       setMessages(m => [
         ...m,
         {
@@ -124,6 +87,19 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
           content: res?.answer || "I couldn't find that in your data — try rephrasing your question.",
         },
       ])
+
+      if (res?.awaiting_confirmation) {
+        setAwaitingConfirmation(true)
+        setPendingContext(res.captured_context)
+      } else {
+        setAwaitingConfirmation(false)
+        setPendingContext(null)
+      }
+
+      if (pendingContext && res?.confirmed) {
+        await handleReanalyze(pendingContext)
+      }
+
     } catch {
       setMessages(m => [
         ...m,
@@ -133,8 +109,7 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
       setBusy(false)
       inputRef.current?.focus()
     }
-  }, [input, busy, sessionId, history])
-
+  }, [input, busy, processKey, pendingContext])
 
 
   return (
@@ -200,16 +175,60 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
               )}
               <div
                 className={clsx(
-                  'max-w-[82%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap',
+                  'max-w-[82%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words',
                   m.role === 'user'
-                    ? 'bg-brand-500 text-black font-medium rounded-br-sm'
+                    ? 'bg-brand-500 text-black font-medium rounded-br-sm whitespace-pre-wrap'
                     : 'bg-white/[0.06] border border-white/10 text-white/85 rounded-bl-sm'
                 )}
               >
-                {m.content}
+                {m.role === 'user' ? (
+                  m.content
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      // Custom Tailwind styling for Markdown elements so they aren't unstyled
+                      p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                      strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
+                      h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-white mt-3 mb-2" {...props} />,
+                      h2: ({ node, ...props }) => <h2 className="text-base font-bold text-white mt-3 mb-2" {...props} />,
+                      h3: ({ node, ...props }) => <h3 className="text-sm font-bold text-white mt-3 mb-1" {...props} />,
+                      ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                      ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+                      li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                      code: ({ node, inline, ...props }) =>
+                        inline
+                          ? <code className="bg-black/30 px-1 py-0.5 rounded text-brand-300 font-mono text-xs" {...props} />
+                          : <code className="block bg-black/40 p-2 rounded-lg font-mono text-xs overflow-x-auto my-2" {...props} />
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+                )}
               </div>
+
             </div>
           ))}
+
+          {/* Render Yes/No Buttons perfectly aligned with the bot messages */}
+          {awaitingConfirmation && !busy && (
+            <div className="flex gap-2.5 justify-start">
+              <div className="w-7 h-7 shrink-0 opacity-0" /> {/* Spacer for avatar alignment */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => send('yes')}
+                  className="px-4 py-2 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 hover:bg-brand-500/30 text-sm font-medium transition-colors"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => send('no')}
+                  className="px-4 py-2 rounded-xl bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 text-sm font-medium transition-colors"
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
 
           {busy && (
             <div className="flex gap-2.5 justify-start">
@@ -230,38 +249,6 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
             </div>
           )}
         </div>
-
-        {/* ── Suggested questions (What → Where → Why) ───────────────── */}
-        {(suggested.length > 0 || loadingSuggestions) && (
-          <div className="px-4 pb-3 pt-2 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between mb-2 px-1">
-            
-            </div>
-
-            {loadingSuggestions ? (
-              <div className="flex items-center gap-2 px-1 pb-2 text-[11px] text-white/35">
-                <Loader2 size={12} className="animate-spin text-brand-400" />
-                Generating questions from your uploaded data…
-              </div>
-            ) : (
-              <div
-                className="flex flex-col gap-2 max-h-36 overflow-y-auto scrollbar-custom pr-1 pb-1"
-              >
-                {suggested.map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => send(q)}
-                    disabled={busy}
-                    title={q}
-                    className="w-full text-left text-xs px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 hover:text-brand-300 hover:border-brand-500/40 hover:bg-brand-500/[0.06] transition-all disabled:opacity-40"
-                  >
-                    <span>{q}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Composer ───────────────────────────────────────────────── */}
         <div className="border-t border-white/10 p-4">
@@ -290,7 +277,7 @@ export default function DAgentChatPanel({ open, sessionId, onClose }) {
             </button>
           </div>
           <p className="mt-2 text-[10px] text-white/25 text-center">
-            Answers are grounded in your uploaded data for this session.
+            Answers are grounded in your generated process model for this session.
           </p>
         </div>
       </aside>

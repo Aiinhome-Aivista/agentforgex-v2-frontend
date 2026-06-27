@@ -18,7 +18,7 @@ api.interceptors.response.use(
 )
 
 export const analyzeFiles = (files, userInput = '', opts = {}) => {
-  const { sessionId = null, smeContext = '' } = opts
+  const { sessionId = null, smeContext = '', missionVisionContext = '' } = opts
   const form = new FormData()
   if (files && files.length > 0) {
     files.forEach(f => form.append('files', f))
@@ -35,10 +35,17 @@ export const analyzeFiles = (files, userInput = '', opts = {}) => {
   if (sessionId) {
     form.append('session_id', sessionId)
   }
+  if (missionVisionContext && missionVisionContext.trim()) {
+    form.append('mission_vision_context', missionVisionContext.trim())
+  }
   return api.post('/analyze', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+export const sendOnboardingMessage = (message, history = []) =>
+  api.post('/chatbot/onboarding', { message, history })
+
 
 /* ── SME-driven workflow (base graph → chat → enrich → analyze) ───────────── */
 
