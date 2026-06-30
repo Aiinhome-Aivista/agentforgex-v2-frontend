@@ -47,6 +47,15 @@
   .scrollbar-custom::-webkit-scrollbar-thumb {
     @apply bg-white/40 rounded-full hover:bg-white/60 transition-all;
   }
+
+  /* Fix Webkit autofill styling for dark theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    transition: background-color 5000s ease-in-out 0s;
+    -webkit-text-fill-color: white !important;
+  }
 }
 
 @layer components {

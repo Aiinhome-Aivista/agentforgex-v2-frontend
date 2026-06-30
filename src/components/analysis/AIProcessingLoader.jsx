@@ -32,16 +32,19 @@ export default function AIProcessingLoader({
   duration = 15000,
   isApiFinished = false,
   onComplete,
+  startStep = 0,
+  endStep = STAGES.length - 1,
 }) {
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(startStep);
   const [isCompleted, setIsCompleted] = useState(false);
   const [thinkingIdx, setThinkingIdx] = useState(0);
-  const stepDuration = duration / STAGES.length;
+  const stepCount = endStep - startStep + 1;
+  const stepDuration = duration / stepCount;
 
   // Ref to track if we've already fired onComplete to avoid duplicates
   const completeFired = useRef(false);
   const containerRef = useRef(null);
-  const isWaitingForApi = activeStep === STAGES.length - 1 && !isApiFinished;
+  const isWaitingForApi = activeStep === endStep && !isApiFinished;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,29 +59,29 @@ export default function AIProcessingLoader({
 
     const timer = setInterval(() => {
       setActiveStep((prev) => {
-        if (prev === STAGES.length - 1) {
+        if (prev >= endStep) {
           if (isApiFinished) {
             clearInterval(timer);
             setIsCompleted(true);
           }
-          return prev;
+          return endStep;
         }
         return prev + 1;
       });
     }, stepDuration);
 
     return () => clearInterval(timer);
-  }, [stepDuration, isApiFinished, isCompleted]);
+  }, [stepDuration, isApiFinished, isCompleted, endStep]);
 
   // ─── Watch for API finish at last step ─────────────────────────────────
   useEffect(() => {
-    if (activeStep === STAGES.length - 1 && isApiFinished && !isCompleted) {
+    if (activeStep === endStep && isApiFinished && !isCompleted) {
       const delayTimer = setTimeout(() => {
         setIsCompleted(true);
       }, 800);
       return () => clearTimeout(delayTimer);
     }
-  }, [activeStep, isApiFinished, isCompleted]);
+  }, [activeStep, isApiFinished, isCompleted, endStep]);
 
   // ─── Trigger onComplete after success animation ────────────────────────
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function AIProcessingLoader({
 
   // ─── Rotate thinking messages every 2 seconds ─────────────────────────
   useEffect(() => {
-    const messages = isWaitingForApi
+    const messages = (isWaitingForApi && endStep === STAGES.length - 1)
       ? API_WAITING_MESSAGES
       : THINKING_MESSAGES[activeStep] || [];
     if (messages.length <= 1) return;
@@ -104,49 +107,21 @@ export default function AIProcessingLoader({
     }, 2000);
 
     return () => clearInterval(timer);
-  }, [activeStep, isWaitingForApi]);
+  }, [activeStep, isWaitingForApi, endStep]);
 
   const currentThinkingMessage = useCallback(() => {
-    const messages = isWaitingForApi
+    const messages = (isWaitingForApi && endStep === STAGES.length - 1)
       ? API_WAITING_MESSAGES
       : THINKING_MESSAGES[activeStep] || [];
     return messages[thinkingIdx % messages.length] || "";
-  }, [activeStep, isWaitingForApi, thinkingIdx]);
+  }, [activeStep, isWaitingForApi, thinkingIdx, endStep]);
 
   return (
     <div ref={containerRef} className="w-full flex items-center justify-center p-4 min-h-[500px]">
       <AnimatePresence mode="wait">
         {!isCompleted ? (
-          isWaitingForApi ? (
-            <motion.div
-              key="synthesis-card"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="fx-sheen w-full max-w-4xl bg-brand-surface/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col items-center justify-center min-h-[500px]"
-            >
-              {/* Ambient background */}
-              <AuroraBackdrop />
-              <ParticleField count={22} />
-
-              <div className="relative z-10 w-full flex flex-col items-center">
-                <AIThinkingPhase
-                  title="Finalizing Synthesis"
-                  subtitle="We are compiling your final report. This may take a few seconds..."
-                  words={[
-                    "Connecting final nodes",
-                    "Synthesizing insights",
-                    "Scoring automation targets",
-                    "Securing data channels",
-                    "Assembling final report",
-                  ]}
-                />
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="loader-card"
+          <motion.div
+            key="loader-card"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -357,7 +332,6 @@ export default function AIProcessingLoader({
                 </div>
               </div>
             </motion.div>
-          )
         ) : (
           /* ══════════════════════════════════════════════════════════════
              COMPLETION CARD

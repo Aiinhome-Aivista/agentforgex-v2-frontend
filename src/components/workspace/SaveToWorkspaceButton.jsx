@@ -83,11 +83,26 @@ export default function SaveToWorkspaceButton({
     setBusy(true)
     setErr('')
     try {
+      let chat_history = null;
+      const processKey = analysis?.process?.process_key || analysis?.process?._key || analysis?.process?.id || analysis?.process_key;
+      if (processKey) {
+        try {
+          const cachedChat = localStorage.getItem(`agentforgex_chat_${processKey}`);
+          if (cachedChat) {
+             const parsedChat = JSON.parse(cachedChat);
+             if (parsedChat.messages && parsedChat.messages.length > 0) {
+               chat_history = parsedChat.messages;
+             }
+          }
+        } catch(e) {}
+      }
+
       const r = await createWorkspace({
         name: name?.trim() || '',
         session_id: sessionId,
         user_input: userInput,
         analysis,
+        chat_history,
       })
       if (r?.status) {
         setSavedId(r.data?.id || null)

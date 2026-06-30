@@ -284,7 +284,7 @@ export default function OverviewTab({ insights, topTargets, steps, suggestions, 
                               >
                                 <StepCard
                                   step={step}
-                                  index={rowIndex * 4 + i}
+                                  index={rowIndex * 4 + (isReversed ? (displaySteps.length - 1 - i) : i)}
                                   isSelected={selectedStep?.id === step.id}
                                   isLast={step.id === steps[steps.length - 1].id}
                                   onClick={() => selectedStep?.id === step.id ? handleBack() : handleSelectStep(step)}

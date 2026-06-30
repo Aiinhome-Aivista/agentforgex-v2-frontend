@@ -57,6 +57,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 import { sendChatMessage, triggerReanalysis, fetchProcessDiscovery } from '../services/api';
+import { updateWorkspaceChat } from '../services/workspaceApi';
 
 
 
@@ -306,15 +307,26 @@ export default function Chatbot() {
 
 
 
-  const processKey =
-
+  let urlId =
     params.id ||
-
     location.pathname.match(/\/analysis\/([^/?]+)/)?.[1] ||
-
     location.pathname.match(/\/suggestion\/([^/?]+)/)?.[1] ||
-
+    location.pathname.match(/\/workspaces\/([^/?]+)/)?.[1] ||
     null;
+
+  let processKey = urlId;
+  if (location.pathname.includes('/workspaces/') && urlId) {
+    try {
+      const cached = localStorage.getItem(`analysis_${urlId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // ArangoDB document usually has _key, or we returned it as process_key or id
+        processKey = parsed?.process?.process_key || parsed?.process?._key || parsed?.process?.id || parsed?.process_key || urlId;
+      }
+    } catch (e) {
+      console.error("Failed to parse workspace analysis data", e);
+    }
+  }
 
 
 
@@ -362,19 +374,70 @@ export default function Chatbot() {
 
 
 
+  const activeProcessKeyRef = useRef(processKey);
+
   useEffect(() => {
+    if (processKey !== activeProcessKeyRef.current) {
+      activeProcessKeyRef.current = processKey;
 
-    setMessages([]);
+      if (processKey) {
+        try {
+          const saved = localStorage.getItem(`agentforgex_chat_${processKey}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.messages && parsed.messages.length > 0) {
+              setMessages(parsed.messages);
+              setPendingContext(parsed.pendingContext || null);
+              setPendingMessageId(parsed.pendingMessageId || null);
+              setInterview(parsed.interview || null);
+              discoveredRef.current = processKey; // prevent discovery from re-running
+              return;
+            }
+          } else if (location.pathname.includes('/workspaces/') && urlId) {
+            const cachedWorkspace = localStorage.getItem(`analysis_${urlId}`);
+            if (cachedWorkspace) {
+              const parsedWorkspace = JSON.parse(cachedWorkspace);
+              if (parsedWorkspace.chat_history && parsedWorkspace.chat_history.length > 0) {
+                setMessages(parsedWorkspace.chat_history);
+                discoveredRef.current = processKey;
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse chat history", e);
+        }
+      }
 
-    setPendingContext(null);
-
-    setPendingMessageId(null);
-
-    setInterview(null);
-
-    discoveredRef.current = null;   // allow discovery to re-run for the new process
-
+      setMessages([]);
+      setPendingContext(null);
+      setPendingMessageId(null);
+      setInterview(null);
+      discoveredRef.current = null;   // allow discovery to re-run for the new process
+    }
   }, [processKey]);
+
+  useEffect(() => {
+    if (!processKey || processKey !== activeProcessKeyRef.current) return;
+    if (messages.length > 0) {
+      const stateToSave = {
+        messages,
+        pendingContext,
+        pendingMessageId,
+        interview
+      };
+      localStorage.setItem(`agentforgex_chat_${processKey}`, JSON.stringify(stateToSave));
+      
+      if (location.pathname.includes('/workspaces/') && urlId) {
+        updateWorkspaceChat(urlId, messages).catch(e => console.error("Failed to sync chat to backend", e));
+      }
+    } else {
+      localStorage.removeItem(`agentforgex_chat_${processKey}`);
+      if (location.pathname.includes('/workspaces/') && urlId) {
+        updateWorkspaceChat(urlId, []).catch(e => console.error("Failed to sync chat to backend", e));
+      }
+    }
+  }, [messages, pendingContext, pendingMessageId, interview, processKey, location.pathname, urlId]);
 
 
 
@@ -597,14 +660,16 @@ export default function Chatbot() {
 
 
 
-      // Nothing useful to show — silently drop the placeholder.
-
       if (!summary && gaps.length === 0 && questions.length === 0) {
-
-        setMessages((prev) => prev.filter((m) => m.id !== typingId));
-
+        setMessages((prev) => prev
+          .filter((m) => m.id !== typingId)
+          .concat({ 
+            id: `b-discovery-${Date.now()}`, 
+            text: "Hello! I'm your AgentForgeX Assistant. To help me generate the best automation code for you, could you tell me about the technology stack you plan to use? For example, what is your main data source and what type of data is involved? You can also ask me anything about this workflow, or provide more context to re-create the process map.", 
+            isBot: true 
+          })
+        );
         return;
-
       }
 
 

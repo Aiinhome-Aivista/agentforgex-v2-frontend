@@ -43,7 +43,7 @@ export default function SignUpPage() {
     setToken(res.token)
     setStoredUser(res.data)
     login(res.data)
-    navigate('/home', { replace: true })
+    navigate('/workspaces', { replace: true })
   }
 
   // ── Step 1 → request OTP ──────────────────────────────────────────────────
@@ -229,19 +229,19 @@ export default function SignUpPage() {
                 </button>
               </Field>
 
+              <CaptchaWidget ref={captchaRef} />
+
               {error && (
                 <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2.5 rounded-xl flex items-start gap-2">
                   <AlertCircle size={16} className="mt-0.5 shrink-0" /><span>{error}</span>
                 </div>
               )}
 
-              <CaptchaWidget ref={captchaRef} />
-
               <button
                 type="submit" disabled={loading}
                 className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]
                   ${loading
-                    ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                    ? 'bg-brand-500/20 text-brand-500/50 cursor-not-allowed border border-brand-500/10'
                     : 'bg-brand-500 text-black hover:bg-brand-400 shadow-lg shadow-brand-500/20'}`}>
                 {loading ? (<><Loader2 size={18} className="animate-spin" /> Sending OTP...</>) : 'Send verification code'}
               </button>
@@ -298,7 +298,7 @@ export default function SignUpPage() {
                 type="submit" disabled={otpString.length !== 6 || loading}
                 className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]
                   ${(otpString.length !== 6 || loading)
-                    ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                    ? 'bg-brand-500/20 text-brand-500/50 cursor-not-allowed border border-brand-500/10'
                     : 'bg-brand-500 text-black hover:bg-brand-400 shadow-lg shadow-brand-500/20'}`}>
                 {loading ? (<><Loader2 size={18} className="animate-spin" /> Verifying...</>) : 'Verify & continue'}
               </button>

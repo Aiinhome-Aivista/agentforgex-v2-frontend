@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, useId } from "react";
 import { Loader2, AlertCircle, Box, Server } from "lucide-react";
 import { getAutomationArchitecture, runAutomationArchitecture } from "../../services/api";
+import { updateWorkspaceAnalysis } from "../../services/workspaceApi";
 
 // Components
 import { ArchitectureHeader, ExecutionLog } from "./components/ArchitectureUI";
@@ -25,7 +26,7 @@ import {
 
 const STEP_DELAY = 650;
 
-export default function SapValidationWorkflow({ suggestionId, stepKey, analysisId, onComplete, forPdf = false }) {
+export default function SapValidationWorkflow({ suggestionId, stepKey, analysisId, sessionId, onComplete, forPdf = false }) {
   const [workflow, setWorkflow] = useState(null);
   const [layers, setLayers] = useState([]);
   const [nodeMeta, setNodeMeta] = useState({});
@@ -191,10 +192,12 @@ export default function SapValidationWorkflow({ suggestionId, stepKey, analysisI
     // Actual API call
     try {
       if (stepKey) {
-        const sessionId = localStorage.getItem('session_id');
+        const fallbackSessionId = localStorage.getItem('session_id') || analysisId;
+        const finalSessionId = sessionId || fallbackSessionId;
+        
         const payload = {
           step_key: stepKey,
-          session_id: sessionId
+          session_id: finalSessionId
         };
         const response = await runAutomationArchitecture(payload);
         setApiResponse(response);
@@ -231,6 +234,12 @@ export default function SapValidationWorkflow({ suggestionId, stepKey, analysisI
 
             if (updated) {
               localStorage.setItem(`${key}_${sId}`, JSON.stringify(parsed));
+              // Push to backend if this is a saved workspace
+              if (key === 'analysis' && sId && !isNaN(sId)) {
+                updateWorkspaceAnalysis(sId, parsed).catch(err => {
+                  console.error("Failed to sync zero potential to workspace DB:", err);
+                });
+              }
             }
           } catch (e) {
             console.error(`Failed to update ${key} storage:`, e);

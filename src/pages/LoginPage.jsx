@@ -27,7 +27,7 @@ export default function LoginPage() {
             // res is already unwrapped by the axios interceptor → res = { data, message, status, statuscode }
             if (res.status) {
                 login(res.data)       // { id, name } stored in AuthContext
-                navigate('/home')
+                navigate('/workspaces')
             } else {
                 setError(res.message || 'Login failed')
             }

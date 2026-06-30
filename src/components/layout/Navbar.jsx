@@ -18,7 +18,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 glass border-b border-white/5 shadow-2xl">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link to="/home" className="flex items-center gap-2.5 font-bold tracking-tight text-white group">
+        <Link to="/workspaces" className="flex items-center gap-2.5 font-bold tracking-tight text-white group">
           <span className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center group-hover:bg-brand-400 transition-colors">
             <Zap size={16} className="text-black" fill="black" />
           </span>

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, Loader2, Layers, Trash2, AlertCircle, Calendar,
 } from 'lucide-react'
-import { getWorkspace, deleteWorkspace } from '../services/workspaceApi'
+import { getWorkspace, deleteWorkspace, updateWorkspaceAnalysis } from '../services/workspaceApi'
 import ProcessHeader from '../components/analysis/ProcessHeader'
 import OverviewTab from '../components/analysis/OverviewTab'
 import ERPContextTab from '../components/analysis/ERPContextTab'
@@ -67,6 +67,7 @@ export default function WorkspaceDetailPage() {
       setTimeout(() => {
         const freshAnalysisData = findAnalysisData(detail)
         console.log("[WorkspaceDetailPage] located freshAnalysisData:", freshAnalysisData)
+
         if (freshAnalysisData) {
           setWs((prev) => {
             if (!prev) return null
@@ -76,6 +77,12 @@ export default function WorkspaceDetailPage() {
             }
           })
           localStorage.setItem(`analysis_${id}`, JSON.stringify(freshAnalysisData))
+          
+          // Push the new process map analysis back to the MySQL database
+          // so it persists across hard page reloads and browser sessions
+          updateWorkspaceAnalysis(id, freshAnalysisData).catch(err => {
+            console.error("[WorkspaceDetailPage] failed to save reanalysis to backend", err)
+          })
         }
         setIsReanalyzing(false)
       }, 3500)
@@ -228,7 +235,7 @@ export default function WorkspaceDetailPage() {
                           tracking-widest text-white/30">
             <p className="inline-flex items-center gap-1">
               <Calendar size={10} />
-              {new Date(ws.created_at).toLocaleString()}
+              {new Date(ws.created_at).toLocaleString(undefined, { timeZone: 'UTC' })}
             </p>
             {ws.session_id && (
               <p className="font-mono normal-case tracking-normal mt-1

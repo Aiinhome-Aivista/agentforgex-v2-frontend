@@ -35,12 +35,8 @@ import { generateSuggestionBlueprintPPTX } from "../../utils/processPptxGenerato
 // kind: "code"       → existing source-code ZIP download
 // kind: "blueprint"  → NEW per Scenario 2 — calls the suggestion blueprint API
 const FORMATS = [
-  // Technical Design
-  { id: "pdf", kind: "doc", label: "Export as PDF", Icon: FileIcon, iconCls: "text-red-400", fn: generatePDF },
-  { id: "word", kind: "doc", label: "Export as Word", Icon: FileText, iconCls: "text-blue-400", fn: generateDOCX },
-  { id: "pptx", kind: "doc", label: "Export as PowerPoint", Icon: Presentation, iconCls: "text-orange-400", fn: generatePPTX },
   // Code
-  { id: "code", kind: "code", label: "Download the Code", Icon: FileArchive, iconCls: "text-emerald-400" },
+  { id: "code", kind: "code", label: "Download Code", Icon: FileArchive, iconCls: "text-emerald-400" },
   // Blueprint (NEW)
   { id: "bp-pdf", kind: "blueprint", label: "Export Blueprint PDF", Icon: FileIcon, iconCls: "text-red-300", fn: generateSuggestionBlueprintPDF },
   { id: "bp-word", kind: "blueprint", label: "Export Blueprint Word", Icon: FileText, iconCls: "text-blue-300", fn: generateSuggestionBlueprintDOCX },
@@ -99,7 +95,8 @@ export default function SuggestionExportPdf({ suggestion, processData, onDropdow
 
       // ── Source-code ZIP path ─────────────────────────────────────────
       if (format.kind === "code") {
-        const { filename } = await downloadSuggestionCode(suggestionId);
+        const processKey = processData?.process?._key || processData?.process?.id;
+        const { filename } = await downloadSuggestionCode(suggestionId, processKey);
         toast(`Code bundle downloaded${filename ? `: ${filename}` : ''}.`, "success");
         return;
       }
@@ -237,28 +234,7 @@ export default function SuggestionExportPdf({ suggestion, processData, onDropdow
           >
             <div className="p-1 flex flex-col gap-0.5">
 
-              {/* Technical-design section */}
-              {techItems.map(({ id, label, Icon, iconCls }) => (
-                <button
-                  key={id}
-                  onClick={() => handleDownload(id)}
-                  className="
-                    w-full flex items-center gap-3 px-3 py-2.5
-                    text-[10px] font-bold uppercase tracking-widest
-                    text-white/60 hover:text-brand-500 hover:bg-brand-500/10
-                    rounded-lg transition-all duration-150 text-left
-                  "
-                  role="menuitem"
-                >
-                  <Icon size={14} className={iconCls} />
-                  <span>{label}</span>
-                </button>
-              ))}
-
               {/* Code section */}
-              {codeItems.length > 0 && (
-                <div className="border-t border-white/10 my-1" />
-              )}
               {codeItems.map(({ id, label, Icon, iconCls }) => (
                 <button
                   key={id}

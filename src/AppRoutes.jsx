@@ -25,7 +25,7 @@ const PrivateRoute = () => {
 // PublicRoute: Redirect to home if already authenticated
 const PublicRoute = () => {
   const { isAuthenticated } = useAuth()
-  return isAuthenticated ? <Navigate to="/home" replace /> : <Outlet />
+  return isAuthenticated ? <Navigate to="/workspaces" replace /> : <Outlet />
 }
 
 export default function AppRoutes() {
@@ -68,8 +68,8 @@ export default function AppRoutes() {
               </div>
             }
           />
-          {/* Catch-all: Redirect to home or another page */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          {/* Catch-all: Redirect to workspaces or another page */}
+          <Route path="*" element={<Navigate to="/workspaces" replace />} />
         </Route>
       </Route>
     </Routes>

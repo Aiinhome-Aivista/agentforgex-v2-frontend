@@ -28,3 +28,11 @@ export const renameWorkspace = (id, name) =>
 // Delete (user can remove older workspaces)
 export const deleteWorkspace = (id) =>
   auth.delete(`/workspaces/${id}`)
+
+// Update Chat History
+export const updateWorkspaceChat = (id, chat_history) =>
+  auth.patch(`/workspaces/${id}/chat`, { chat_history })
+
+// Update Analysis Data (Process Map)
+export const updateWorkspaceAnalysis = (id, analysis) =>
+  auth.patch(`/workspaces/${id}/analysis`, { analysis })

@@ -238,6 +238,8 @@ export default function HomePage() {
             duration={15000}
             isApiFinished={isIngestFinished}
             onComplete={() => setPhase("chat")}
+            startStep={0}
+            endStep={3}
           />
         ) : phase === "finalizing" ? (
           <AIProcessingLoader
@@ -248,6 +250,8 @@ export default function HomePage() {
                 navigate(`/analysis/${finalResult.process.id}`, { state: { result: finalResult } });
               }
             }}
+            startStep={4}
+            endStep={8}
           />
         ) : (
           <FileUploader

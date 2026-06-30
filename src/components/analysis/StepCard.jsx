@@ -80,7 +80,7 @@ export default function StepCard({ step, index, isLast, isSelected, onClick }) {
         {/* Header */}
         <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
           <span className="text-xs font-medium text-white/40 uppercase tracking-wide shrink-0 whitespace-nowrap">
-            Step {step.step_number}
+            Step {index + 1}
           </span>
           <div
             className={clsx('agent-tag border flex items-center min-w-0', typeColor)}
